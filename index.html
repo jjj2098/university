@@ -1,0 +1,983 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>전국 대학 입학처 지도</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=Gowun+Batang:wght@700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* 레이아웃: 왼쪽 시·도 타일 지도(지리 배치) + 오른쪽 대학 목록, 좁은 화면에서는 위아래로 쌓음 */
+:root{
+  --bg:#f3f5f6; --panel:#ffffff; --fg:#1b2a33; --muted:#5d6e78; --line:#d9e1e5;
+  --sea:#e3edf1; --land:#ffffff; --land-hi:#0f5e6b; --hover:#d4e6ea; --land-hi-fg:#ffffff;
+  --accent:#0f5e6b; --uni:#2f4fa2; --uni-bg:#e6ebf8; --col:#a5591a; --col-bg:#f8ebdd;
+  --display:"Gowun Batang","Nanum Myeongjo",serif;
+  --body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11181c; --panel:#182228; --fg:#e4ecef; --muted:#93a5ae; --line:#2b3a42;
+  --sea:#0d1417; --land:#1f2c33; --land-hi:#4fb3c2; --hover:#29414a; --land-hi-fg:#0b1418;
+  --accent:#6cc6d3; --uni:#9db3f0; --uni-bg:#222c47; --col:#e8a66b; --col-bg:#3a2a1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11181c; --panel:#182228; --fg:#e4ecef; --muted:#93a5ae; --line:#2b3a42;
+  --sea:#0d1417; --land:#1f2c33; --land-hi:#4fb3c2; --hover:#29414a; --land-hi-fg:#0b1418;
+  --accent:#6cc6d3; --uni:#9db3f0; --uni-bg:#222c47; --col:#e8a66b; --col-bg:#3a2a1b; color-scheme:dark}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 48px}
+header h1{font-family:var(--display);font-size:clamp(1.6rem,3.4vw,2.2rem);margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em}
+header p{margin:0;color:var(--muted);max-width:64ch}
+.portal{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.portal a{font-size:.85rem;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--panel);padding:5px 10px;border-radius:6px}
+.portal a:hover{border-color:var(--accent)}
+.layout{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:24px;margin-top:24px;align-items:start}
+@media (max-width:820px){.layout{grid-template-columns:minmax(0,1fr)}}
+.mapbox{background:var(--sea);border-radius:14px;padding:16px;position:sticky;top:max(16px,env(safe-area-inset-top,0px))}
+@media (max-width:820px){.mapbox{position:static}}
+.maplabel{font-size:.75rem;letter-spacing:.08em;color:var(--muted);margin-bottom:10px;display:flex;justify-content:space-between}
+.map{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:64px;gap:6px;
+  grid-template-areas:
+  "incheon seoul gyeonggi gangwon"
+  "chungnam sejong chungbuk gyeongbuk"
+  "jeonbuk daejeon daegu ulsan"
+  "gwangju jeonnam gyeongnam busan"
+  "jeju all all all"}
+.tile{background:var(--land);border:1px solid var(--line);border-radius:8px;padding:6px 8px;text-align:left;cursor:pointer;font:inherit;color:var(--fg);display:flex;flex-direction:column;justify-content:space-between;min-width:0}
+.tile:hover{border-color:var(--accent)}
+.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tile b{font-size:.92rem;font-weight:700}
+.tile small{font-family:var(--mono);font-size:.7rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.tile[aria-pressed="true"]{background:var(--land-hi);color:var(--land-hi-fg);border-color:var(--land-hi)}
+.tile[aria-pressed="true"] small{color:var(--land-hi-fg);opacity:.85}
+.allbtn{grid-area:all;width:100%;font:inherit;font-size:.9rem;font-weight:500;padding:7px;border-radius:8px;border:1px solid var(--line);background:var(--land);color:var(--fg);cursor:pointer}
+.allbtn[aria-pressed="true"]{background:var(--land-hi);color:var(--land-hi-fg)}
+.tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.tools input{flex:1 1 220px;min-width:0;font:inherit;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;font-size:.85rem;border:0;background:none;color:var(--muted);padding:8px 12px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--land-hi-fg)}
+:root .seg button[aria-pressed="true"]{color:var(--bg)}
+.listhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:8px}
+.listhead h2{font-family:var(--display);font-size:1.35rem;margin:0}
+.listhead span{color:var(--muted);font-size:.85rem;font-variant-numeric:tabular-nums}
+.group{margin-top:18px}
+.group h3{font-size:.78rem;letter-spacing:.08em;color:var(--muted);margin:0 0 6px;font-weight:500}
+ul.unis{list-style:none;margin:0;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+ul.unis li{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 14px;border-top:1px solid var(--line)}
+ul.unis li:first-child{border-top:0}
+.name{flex:1 1 200px;min-width:0;font-weight:500}
+.name em{font-style:normal;font-size:.78rem;color:var(--muted);margin-left:6px;font-weight:400}
+.chip{font-size:.72rem;padding:2px 7px;border-radius:5px;font-weight:500;white-space:nowrap}
+.chip.u{background:var(--uni-bg);color:var(--uni)}
+.chip.c{background:var(--col-bg);color:var(--col)}
+.links{display:flex;gap:6px;flex-wrap:wrap}
+.links a{font-size:.8rem;text-decoration:none;padding:4px 9px;border-radius:6px;border:1px solid var(--line);color:var(--fg);white-space:nowrap}
+.links a.adm{border-color:var(--accent);color:var(--accent);font-weight:500}
+.links a.srch{border-style:dashed}
+.links a:hover{background:var(--sea)}
+.name .feat{display:block;font-size:.8rem;color:var(--muted);font-weight:400;margin-top:2px}
+.more{font:inherit;font-size:.8rem;padding:4px 9px;border-radius:6px;border:1px solid var(--line);background:var(--sea);color:var(--fg);cursor:pointer;white-space:nowrap}
+.more[aria-expanded="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.detail{flex:1 1 100%;display:grid;gap:8px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-top:4px}
+.drow{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:10px;align-items:start;font-size:.88rem}
+@media (max-width:480px){.drow{grid-template-columns:minmax(0,1fr);gap:4px}}
+.dl{font-size:.75rem;letter-spacing:.04em;color:var(--muted);padding-top:2px}
+.majors{display:flex;flex-wrap:wrap;gap:5px}
+.mj{font-size:.8rem;padding:2px 8px;border-radius:999px;background:var(--uni-bg);color:var(--uni)}
+.stats{display:flex;flex-wrap:wrap;gap:14px;align-items:baseline}
+.stat{display:flex;flex-direction:column}
+.stat small{font-size:.72rem;color:var(--muted)}
+.stat b{font-family:var(--mono);font-size:1.05rem;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.imp{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:16px;font-size:.88rem}
+.imp summary{cursor:pointer;font-weight:500;color:var(--accent)}
+.imp p,.imp ol{margin:8px 0;max-width:70ch}
+.improw{display:flex;flex-wrap:wrap;gap:8px}
+.filebtn,.improw button{font:inherit;font-size:.85rem;padding:6px 12px;border-radius:8px;border:1px solid var(--accent);background:var(--panel);color:var(--accent);cursor:pointer}
+.filebtn input{display:none}
+.improw button{border-color:var(--line);color:var(--muted)}
+.views{display:flex;gap:4px;margin-top:22px;border-bottom:1px solid var(--line)}
+.views button{font:inherit;font-weight:500;font-size:.95rem;border:0;background:none;color:var(--muted);padding:10px 16px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.views button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.views button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.mapview{margin-top:18px}
+.mvtools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.mvtools input{flex:1 1 240px;min-width:0;font:inherit;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg)}
+.jump{display:flex;flex-wrap:wrap;gap:6px}
+.jump button{font:inherit;font-size:.82rem;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.jump button:hover{border-color:var(--accent);color:var(--accent)}
+.mvbody{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:16px;align-items:start}
+@media (max-width:900px){.mvbody{grid-template-columns:minmax(0,1fr)}}
+.stage{position:relative;background:var(--sea);border-radius:14px;overflow:hidden;height:min(78vh,820px);min-height:480px;touch-action:none;cursor:grab}
+.stage.drag{cursor:grabbing}
+#ksvg{width:100%;height:100%;display:block;user-select:none;-webkit-user-select:none}
+.prov{fill:var(--land);stroke:var(--line);cursor:pointer}
+.prov:hover{fill:var(--hover)}
+.prov.on{fill:var(--hover)}
+.pname{fill:var(--muted);font-family:var(--display);text-anchor:middle;pointer-events:none;opacity:.85}
+.dot{stroke:var(--land);cursor:pointer}
+.dot.pub{fill:var(--accent)} .dot.pri{fill:var(--uni)} .dot.col{fill:var(--col)}
+.dot.dim{opacity:.12}
+.dot.hit{stroke:var(--fg)}
+.dot.sel{stroke:var(--fg)}
+.lbl{fill:var(--fg);paint-order:stroke;stroke:var(--sea);stroke-linejoin:round;pointer-events:none;font-family:var(--body);font-weight:500}
+.lbl.sel{font-weight:700}
+.zoomer{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:4px}
+.zoomer button{width:36px;height:36px;font:inherit;font-size:1.15rem;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer}
+.hint{position:absolute;left:10px;bottom:10px;right:56px;font-size:.75rem;color:var(--muted);background:var(--panel);border:1px solid var(--line);padding:5px 9px;border-radius:8px;width:fit-content;max-width:calc(100% - 66px)}
+.side{display:grid;gap:12px;min-width:0}
+.legend{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px;font-size:.88rem}
+.legend h4{margin:0;font-size:.75rem;letter-spacing:.06em;color:var(--muted);font-weight:500}
+.legend label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.legend .sw{width:12px;height:12px;border-radius:50%;flex:none}
+.legend .n{margin-left:auto;font-family:var(--mono);font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.sw.pub{background:var(--accent)} .sw.pri{background:var(--uni)} .sw.col{background:var(--col)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;font-size:.88rem}
+.card p{margin:0}
+.card h3{font-family:var(--display);font-size:1.25rem;margin:0;line-height:1.3}
+.card .meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;color:var(--muted);font-size:.8rem}
+.card .links{display:flex;flex-wrap:wrap;gap:6px}
+.rstat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:.85rem}
+.rstat h4{margin:0 0 8px;font-size:.75rem;letter-spacing:.06em;color:var(--muted);font-weight:500}
+.rstat table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.rstat td,.rstat th{padding:3px 4px;text-align:right;border-top:1px solid var(--line)}
+.rstat th{font-weight:500;color:var(--muted);font-size:.75rem;border-top:0}
+.rstat td:first-child,.rstat th:first-child{text-align:left}
+.rstat tr.on td{color:var(--accent);font-weight:700}
+.rstat tbody tr{cursor:pointer}
+.empty{padding:24px;color:var(--muted);text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.note{margin-top:28px;font-size:.8rem;color:var(--muted);max-width:75ch}
+@media (prefers-reduced-motion:no-preference){.tile{transition:background .15s,border-color .15s}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>전국 대학 입학처 지도</h1>
+  <p>지도에서 시·도를 누르면 그 지역의 4년제 대학과 전문대학이 나옵니다. 대학마다 입학처, 홈페이지, 네이버 지도 위치로 바로 갈 수 있습니다.</p>
+  <div class="portal">
+    <a href="https://www.adiga.kr" target="_blank" rel="noopener">대입정보포털 어디가</a>
+    <a href="https://www.procollege.kr" target="_blank" rel="noopener">전문대학 입학정보 프로칼리지</a>
+    <a href="https://www.academyinfo.go.kr" target="_blank" rel="noopener">대학알리미</a>
+  </div>
+</header>
+<nav class="views" role="tablist" aria-label="보기 방식">
+  <button type="button" role="tab" id="tabList" aria-selected="true">목록으로 보기</button>
+  <button type="button" role="tab" id="tabMap" aria-selected="false">전국대학지도</button>
+</nav>
+<section id="mapView" class="mapview" hidden>
+  <div class="mvtools">
+    <input id="mq" type="search" placeholder="지도에서 대학·학과 찾기 (예: 한양, 항공운항)" aria-label="지도에서 대학 찾기">
+    <div class="jump" id="jump"></div>
+  </div>
+  <div class="mvbody">
+    <div class="stage" id="stage">
+      <svg id="ksvg" role="img" aria-label="대한민국 대학 분포 지도"></svg>
+      <div class="zoomer">
+        <button type="button" id="zin" aria-label="확대">+</button>
+        <button type="button" id="zout" aria-label="축소">−</button>
+        <button type="button" id="zreset" aria-label="전국 보기">⟲</button>
+      </div>
+      <div class="hint" id="hint">끌어서 이동 · 휠이나 두 손가락으로 확대 · 시·도를 누르면 그 지역으로 확대</div>
+    </div>
+    <aside class="side">
+      <div class="legend" id="legend"></div>
+      <div class="card" id="card"><p class="muted">지도에서 점을 누르면 대학 현황이 여기에 나옵니다.</p></div>
+      <div class="rstat" id="rstat"></div>
+    </aside>
+  </div>
+</section>
+
+<div class="layout">
+  <aside class="mapbox">
+    <div class="maplabel"><span>시·도 선택</span><span id="total"></span></div>
+    <div class="map" id="map"></div>
+    <button class="allbtn" id="allbtn" type="button" aria-pressed="false">전국 전체 보기</button>
+  </aside>
+  <main>
+    <div class="tools">
+      <input id="q" type="search" placeholder="대학 이름 검색 (예: 부산, 교대, 간호)" aria-label="대학 이름 검색">
+      <div class="seg" role="group" aria-label="학교 유형">
+        <button type="button" data-t="all" aria-pressed="true">전체</button>
+        <button type="button" data-t="4" aria-pressed="false">4년제</button>
+        <button type="button" data-t="2" aria-pressed="false">전문대</button>
+      </div>
+    </div>
+    <details class="imp" id="imp">
+      <summary>취업률·등록금 불러오기</summary>
+      <p>대학알리미(academyinfo.go.kr)의 공시 자료를 엑셀이나 CSV로 내려받아 넣으면 각 대학 정보에 취업률과 평균 등록금이 표시됩니다. '학교명'과 '취업률', '등록금' 머리글이 있는 파일이면 됩니다. 취업률 파일과 등록금 파일을 따로 넣어도 합쳐집니다. 넣은 자료는 이 브라우저에만 저장됩니다.</p>
+      <ol><li>대학알리미 → 대학별 공시정보 또는 공시자료 다운로드</li><li>'졸업생의 취업 현황'과 '등록금 현황' 항목을 엑셀로 저장</li><li>아래 버튼으로 파일 선택</li></ol>
+      <div class="improw"><label class="filebtn">파일 선택<input id="impfile" type="file" accept=".xlsx,.xls,.csv"></label><button type="button" id="impclear">불러온 자료 지우기</button></div>
+      <p id="impmsg" class="muted" role="status"></p>
+    </details>
+    <div class="listhead"><h2 id="rtitle"></h2><span id="rcount"></span></div>
+    <div id="list"></div>
+  </main>
+</div>
+
+<p class="note">입학처 버튼은 대학 입학처 사이트로 연결되며, 입학처 주소가 확인되지 않은 대학은 네이버에서 "대학명 입학처" 검색 결과로 연결됩니다. 대학 통폐합·교명 변경·주소 변경이 잦으므로 지원 전에는 반드시 대학 공식 모집요강을 확인하세요. 본교 캠퍼스 위치를 기준으로 지역을 나누었고, 주요 분교 캠퍼스는 따로 표시했습니다.</p>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const REGIONS=[
+ ["seoul","서울"],["incheon","인천"],["gyeonggi","경기"],["gangwon","강원"],
+ ["chungbuk","충북"],["sejong","세종"],["daejeon","대전"],["chungnam","충남"],
+ ["jeonbuk","전북"],["gwangju","광주"],["jeonnam","전남"],["daegu","대구"],
+ ["gyeongbuk","경북"],["ulsan","울산"],["busan","부산"],["gyeongnam","경남"],["jeju","제주"]];
+// 이름|유형(4/2)|홈페이지|입학처|비고
+const D={
+seoul:`감리교신학대학교|4|mtu.ac.kr||
+건국대학교|4|konkuk.ac.kr|enter.konkuk.ac.kr|
+경희대학교|4|khu.ac.kr|iphak.khu.ac.kr|
+고려대학교|4|korea.ac.kr|oku.korea.ac.kr|
+광운대학교|4|kw.ac.kr|iphak.kw.ac.kr|
+국민대학교|4|kookmin.ac.kr|admission.kookmin.ac.kr|
+덕성여자대학교|4|duksung.ac.kr|ipsi.duksung.ac.kr|
+동국대학교|4|dongguk.edu|ipsi.dongguk.edu|
+동덕여자대학교|4|dongduk.ac.kr|ipsi.dongduk.ac.kr|
+명지대학교|4|mju.ac.kr|iphak.mju.ac.kr|
+삼육대학교|4|syu.ac.kr|ipsi.syu.ac.kr|
+상명대학교|4|smu.ac.kr|admission.smu.ac.kr|
+서강대학교|4|sogang.ac.kr|admission.sogang.ac.kr|
+서경대학교|4|skuniv.ac.kr||
+서울과학기술대학교|4|seoultech.ac.kr|admission.seoultech.ac.kr|국립
+서울교육대학교|4|snue.ac.kr||교대
+서울기독대학교|4|scu.ac.kr||
+서울대학교|4|snu.ac.kr|admission.snu.ac.kr|국립
+서울시립대학교|4|uos.ac.kr|admission.uos.ac.kr|공립
+서울여자대학교|4|swu.ac.kr|admission.swu.ac.kr|
+서울한영대학교|4|||
+성공회대학교|4|skhu.ac.kr||
+성균관대학교|4|skku.edu|admission.skku.edu|
+성신여자대학교|4|sungshin.ac.kr|ipsi.sungshin.ac.kr|
+세종대학교|4|sejong.ac.kr|ipsi.sejong.ac.kr|
+숙명여자대학교|4|sookmyung.ac.kr|admission.sookmyung.ac.kr|
+숭실대학교|4|ssu.ac.kr|admission.ssu.ac.kr|
+연세대학교|4|yonsei.ac.kr|admission.yonsei.ac.kr|
+이화여자대학교|4|ewha.ac.kr|admission.ewha.ac.kr|
+장로회신학대학교|4|puts.ac.kr||
+중앙대학교|4|cau.ac.kr|admission.cau.ac.kr|
+총신대학교|4|chongshin.ac.kr||
+추계예술대학교|4|chugye.ac.kr||
+한국성서대학교|4|bible.ac.kr||
+한국예술종합학교|4|karts.ac.kr||국립 특수
+한국외국어대학교|4|hufs.ac.kr|adms.hufs.ac.kr|
+한국체육대학교|4|knsu.ac.kr||국립
+한성대학교|4|hansung.ac.kr||
+한양대학교|4|hanyang.ac.kr|go.hanyang.ac.kr|
+홍익대학교|4|hongik.ac.kr|ibsi.hongik.ac.kr|
+KC대학교|4|kcu.ac.kr||
+육군사관학교|4|kma.ac.kr||사관학교
+동양미래대학교|2|dongyang.ac.kr||
+명지전문대학|2|mjc.ac.kr||
+배화여자대학교|2|baewha.ac.kr||
+삼육보건대학교|2|shu.ac.kr||
+서울여자간호대학교|2|snjc.ac.kr||
+서일대학교|2|seoil.ac.kr||
+숭의여자대학교|2|sewc.ac.kr||
+인덕대학교|2|induk.ac.kr||
+한양여자대학교|2|hywoman.ac.kr||
+한국폴리텍대학|2|kopo.ac.kr||전국 캠퍼스`,
+incheon:`인하대학교|4|inha.ac.kr|admission.inha.ac.kr|
+인천대학교|4|inu.ac.kr|admission.inu.ac.kr|국립
+경인교육대학교|4|ginue.ac.kr||교대
+인천가톨릭대학교|4|iccu.ac.kr||
+경인여자대학교|2|kiwu.ac.kr||
+인하공업전문대학|2|inhatc.ac.kr||
+인천재능대학교|2|||`,
+gyeonggi:`가천대학교|4|gachon.ac.kr|admission.gachon.ac.kr|
+가톨릭대학교|4|catholic.ac.kr|ipsi.catholic.ac.kr|부천
+강남대학교|4|kangnam.ac.kr||
+경기대학교|4|kyonggi.ac.kr||
+단국대학교|4|dankook.ac.kr|ipsi.dankook.ac.kr|죽전
+대진대학교|4|daejin.ac.kr||
+루터대학교|4|ltu.ac.kr||
+서울신학대학교|4|stu.ac.kr||
+성결대학교|4|sungkyul.ac.kr||
+수원대학교|4|suwon.ac.kr||
+신한대학교|4|shinhan.ac.kr||
+아세아연합신학대학교|4|acts.ac.kr||
+아주대학교|4|ajou.ac.kr||
+안양대학교|4|anyang.ac.kr||
+용인대학교|4|yongin.ac.kr||
+을지대학교|4|eulji.ac.kr||성남
+차의과학대학교|4|cha.ac.kr||
+칼빈대학교|4|calvin.ac.kr||
+평택대학교|4|ptu.ac.kr||
+한경국립대학교|4|hknu.ac.kr||국립
+한국공학대학교|4|tukorea.ac.kr||
+한국항공대학교|4|kau.ac.kr||
+한세대학교|4|hansei.ac.kr||
+한신대학교|4|hs.ac.kr||
+협성대학교|4|uhs.ac.kr||
+한양대학교 ERICA|4|erica.hanyang.ac.kr|go.hanyang.ac.kr|분교 캠퍼스
+경기과학기술대학교|2|gtec.ac.kr||
+경민대학교|2|kyungmin.ac.kr||
+경복대학교|2|kbu.ac.kr||
+계원예술대학교|2|kaywon.ac.kr||
+국제대학교|2|kookje.ac.kr||
+김포대학교|2|kimpo.ac.kr||
+농협대학교|2|nonghyup.ac.kr||
+대림대학교|2|daelim.ac.kr||
+동남보건대학교|2|dongnam.ac.kr||
+동서울대학교|2|du.ac.kr||
+동아방송예술대학교|2|dima.ac.kr||
+두원공과대학교|2|doowon.ac.kr||
+부천대학교|2|bc.ac.kr||
+서정대학교|2|seojeong.ac.kr||
+수원과학대학교|2|ssc.ac.kr||
+수원여자대학교|2|swc.ac.kr||
+신구대학교|2|shingu.ac.kr||
+신안산대학교|2|sau.ac.kr||
+안산대학교|2|ansan.ac.kr||
+여주대학교|2|yit.ac.kr||
+연성대학교|2|yeonsung.ac.kr||
+오산대학교|2|osan.ac.kr||
+용인예술과학대학교|2|||
+유한대학교|2|yuhan.ac.kr||
+장안대학교|2|jangan.ac.kr||
+청강문화산업대학교|2|ck.ac.kr||
+한국관광대학교|2|ktc.ac.kr||
+한국복지대학교|2|hanrw.ac.kr||`,
+gangwon:`강원대학교|4|kangwon.ac.kr||국립
+강릉원주대학교|4|gwnu.ac.kr||국립, 강원대와 통합 추진
+가톨릭관동대학교|4|cku.ac.kr||
+경동대학교|4|kduniv.ac.kr||
+상지대학교|4|sangji.ac.kr||
+춘천교육대학교|4|cnue.ac.kr||교대
+한라대학교|4|halla.ac.kr||
+한림대학교|4|hallym.ac.kr||
+연세대학교 미래캠퍼스|4|mirae.yonsei.ac.kr|admission.yonsei.ac.kr|원주 분교 캠퍼스
+강릉영동대학교|2|gyc.ac.kr||
+강원관광대학교|2|kt.ac.kr||
+세경대학교|2|saekyung.ac.kr||
+송곡대학교|2|songgok.ac.kr||
+송호대학교|2|songho.ac.kr||
+한림성심대학교|2|hsc.ac.kr||`,
+chungbuk:`충북대학교|4|chungbuk.ac.kr||국립
+한국교통대학교|4|ut.ac.kr||국립
+한국교원대학교|4|knue.ac.kr||국립
+청주교육대학교|4|cje.ac.kr||교대
+청주대학교|4|cju.ac.kr||
+서원대학교|4|seowon.ac.kr||
+세명대학교|4|semyung.ac.kr||
+극동대학교|4|kdu.ac.kr||
+중원대학교|4|jwu.ac.kr||
+꽃동네대학교|4|kkot.ac.kr||
+유원대학교|4|u1.ac.kr||
+건국대학교 글로컬캠퍼스|4|kku.ac.kr||충주 분교 캠퍼스
+공군사관학교|4|afa.ac.kr||사관학교
+충북보건과학대학교|2|chsu.ac.kr||
+충청대학교|2|ok.ac.kr||
+대원대학교|2|daewon.ac.kr||
+강동대학교|2|gangdong.ac.kr||
+충북도립대학교|2|cpu.ac.kr||`,
+sejong:`고려대학교 세종캠퍼스|4|sejong.korea.ac.kr||분교 캠퍼스
+홍익대학교 세종캠퍼스|4|sejong.hongik.ac.kr|ibsi.hongik.ac.kr|분교 캠퍼스
+한국영상대학교|2|pro.ac.kr||`,
+daejeon:`충남대학교|4|cnu.ac.kr||국립
+한밭대학교|4|hanbat.ac.kr||국립
+KAIST|4|kaist.ac.kr|admission.kaist.ac.kr|과학기술원
+대전대학교|4|dju.ac.kr||
+목원대학교|4|mokwon.ac.kr||
+배재대학교|4|pcu.ac.kr||
+우송대학교|4|wsu.ac.kr||
+한남대학교|4|hannam.ac.kr||
+대전신학대학교|4|dts.ac.kr||
+침례신학대학교|4|kbtus.ac.kr||
+국군간호사관학교|4|kafna.ac.kr||사관학교
+대덕대학교|2|ddu.ac.kr||
+대전과학기술대학교|2|dst.ac.kr||
+대전보건대학교|2|hit.ac.kr||
+우송정보대학|2|wsi.ac.kr||`,
+chungnam:`공주대학교|4|kongju.ac.kr||국립
+공주교육대학교|4|gjue.ac.kr||교대
+순천향대학교|4|sch.ac.kr||
+호서대학교|4|hoseo.ac.kr||
+선문대학교|4|sunmoon.ac.kr||
+백석대학교|4|bu.ac.kr||
+남서울대학교|4|nsu.ac.kr||
+나사렛대학교|4|kornu.ac.kr||
+한국기술교육대학교|4|koreatech.ac.kr||
+건양대학교|4|konyang.ac.kr||
+중부대학교|4|joongbu.ac.kr||
+청운대학교|4|chungwoon.ac.kr||
+한서대학교|4|hanseo.ac.kr||
+금강대학교|4|ggu.ac.kr||
+한국전통문화대학교|4|nuch.ac.kr||국립
+경찰대학|4|police.ac.kr||특수
+단국대학교 천안캠퍼스|4|dankook.ac.kr|ipsi.dankook.ac.kr|분교 캠퍼스
+상명대학교 천안캠퍼스|4|smu.ac.kr|admission.smu.ac.kr|분교 캠퍼스
+신성대학교|2|shinsung.ac.kr||
+아주자동차대학교|2|motor.ac.kr||
+연암대학교|2|yonam.ac.kr||
+백석문화대학교|2|bscu.ac.kr||
+혜전대학교|2|hj.ac.kr||`,
+jeonbuk:`전북대학교|4|jbnu.ac.kr||국립
+군산대학교|4|kunsan.ac.kr||국립
+전주교육대학교|4|jnue.ac.kr||교대
+원광대학교|4|wku.ac.kr||
+우석대학교|4|woosuk.ac.kr||
+전주대학교|4|jj.ac.kr||
+예수대학교|4|jesus.ac.kr||
+호원대학교|4|howon.ac.kr||
+한일장신대학교|4|hanil.ac.kr||
+군장대학교|2|kjc.ac.kr||
+원광보건대학교|2|wkhc.ac.kr||
+전북과학대학교|2|jbsc.ac.kr||
+전주기전대학|2|kijeon.ac.kr||
+전주비전대학교|2|jvision.ac.kr||
+백제예술대학교|2|paekche.ac.kr||`,
+gwangju:`전남대학교|4|jnu.ac.kr||국립
+조선대학교|4|chosun.ac.kr||
+광주교육대학교|4|gnue.ac.kr||교대
+GIST 광주과학기술원|4|gist.ac.kr||과학기술원
+광주대학교|4|gwangju.ac.kr||
+광주여자대학교|4|kwu.ac.kr||
+남부대학교|4|nambu.ac.kr||
+호남대학교|4|honam.ac.kr||
+호남신학대학교|4|htus.ac.kr||
+광신대학교|4|kwangshin.ac.kr||
+송원대학교|4|songwon.ac.kr||
+광주보건대학교|2|ghu.ac.kr||
+기독간호대학교|2|ccn.ac.kr||
+동강대학교|2|dkc.ac.kr||
+서영대학교|2|seoyeong.ac.kr||
+조선간호대학교|2|cnc.ac.kr||
+조선이공대학교|2|cst.ac.kr||`,
+jeonnam:`목포대학교|4|mokpo.ac.kr||국립
+순천대학교|4|scnu.ac.kr||국립
+목포해양대학교|4|mmu.ac.kr||국립
+한국에너지공과대학교|4|kentech.ac.kr||나주
+동신대학교|4|dsu.ac.kr||
+세한대학교|4|sehan.ac.kr||
+초당대학교|4|chodang.ac.kr||
+목포가톨릭대학교|4|mcu.ac.kr||
+목포과학대학교|2|||
+순천제일대학교|2|suncheon.ac.kr||
+전남과학대학교|2|cntu.ac.kr||
+전남도립대학교|2|dorip.ac.kr||
+청암대학교|2|||`,
+daegu:`경북대학교|4|knu.ac.kr||국립
+계명대학교|4|kmu.ac.kr||
+대구교육대학교|4|dnue.ac.kr||교대
+DGIST 대구경북과학기술원|4|dgist.ac.kr||과학기술원
+계명문화대학교|2|kmcu.ac.kr||
+대구과학대학교|2|tsu.ac.kr||
+대구보건대학교|2|dhc.ac.kr||
+수성대학교|2|sc.ac.kr||
+영남이공대학교|2|ync.ac.kr||
+영진전문대학교|2|yju.ac.kr||`,
+gyeongbuk:`영남대학교|4|yu.ac.kr||경산
+대구대학교|4|daegu.ac.kr||경산
+대구가톨릭대학교|4|cu.ac.kr||경산
+대구한의대학교|4|dhu.ac.kr||경산
+경일대학교|4|kiu.kr||경산
+POSTECH 포항공과대학교|4|postech.ac.kr||
+한동대학교|4|handong.edu||
+금오공과대학교|4|kumoh.ac.kr||국립
+국립경국대학교|4|||구 안동대
+경운대학교|4|ikw.ac.kr||
+김천대학교|4|gimcheon.ac.kr||
+동양대학교|4|dyu.ac.kr||
+위덕대학교|4|uu.ac.kr||
+대신대학교|4|daeshin.ac.kr||
+동국대학교 WISE캠퍼스|4|wise.dongguk.ac.kr||경주 분교 캠퍼스
+경북전문대학교|2|kbc.ac.kr||
+구미대학교|2|gumi.ac.kr||
+대경대학교|2|tk.ac.kr||
+가톨릭상지대학교|2|csj.ac.kr||
+문경대학교|2|||
+선린대학교|2|sunlin.ac.kr||
+안동과학대학교|2|asc.ac.kr||
+포항대학교|2|pohang.ac.kr||
+호산대학교|2|hosan.ac.kr||
+서라벌대학교|2|sorabol.ac.kr||
+경북보건대학교|2|||`,
+ulsan:`울산대학교|4|ulsan.ac.kr||
+UNIST 울산과학기술원|4|unist.ac.kr||과학기술원
+울산과학대학교|2|uc.ac.kr||
+춘해보건대학교|2|ch.ac.kr||`,
+busan:`부산대학교|4|pusan.ac.kr||국립
+부경대학교|4|pknu.ac.kr||국립
+한국해양대학교|4|kmou.ac.kr||국립
+부산교육대학교|4|bnue.ac.kr||교대
+동아대학교|4|donga.ac.kr||
+동의대학교|4|deu.ac.kr||
+경성대학교|4|ks.ac.kr||
+신라대학교|4|silla.ac.kr||
+동서대학교|4|dongseo.ac.kr||
+부산외국어대학교|4|bufs.ac.kr||
+고신대학교|4|kosin.ac.kr||
+부산가톨릭대학교|4|cup.ac.kr||
+동명대학교|4|tu.ac.kr||
+영산대학교|4|ysu.ac.kr||
+경남정보대학교|2|kit.ac.kr||
+대동대학교|2|daedong.ac.kr||
+동의과학대학교|2|dit.ac.kr||
+동주대학교|2|dongju.ac.kr||
+부산경상대학교|2|bsks.ac.kr||
+부산과학기술대학교|2|bist.ac.kr||
+부산여자대학교|2|bwc.ac.kr||
+부산보건대학교|2|||`,
+gyeongnam:`경상국립대학교|4|gnu.ac.kr||국립
+창원대학교|4|changwon.ac.kr||국립
+진주교육대학교|4|cue.ac.kr||교대
+경남대학교|4|kyungnam.ac.kr||
+인제대학교|4|inje.ac.kr||
+가야대학교|4|kaya.ac.kr||
+창신대학교|4|cs.ac.kr||
+해군사관학교|4|navy.ac.kr||사관학교
+거제대학교|2|koje.ac.kr||
+김해대학교|2|gimhae.ac.kr||
+마산대학교|2|masan.ac.kr||
+연암공과대학교|2|yc.ac.kr||
+창원문성대학교|2|cmu.ac.kr||
+동원과학기술대학교|2|dwu.ac.kr||
+경남도립거창대학|2|gc.ac.kr||
+경남도립남해대학|2|namhae.ac.kr||
+한국승강기대학교|2|||`,
+jeju:`제주대학교|4|jejunu.ac.kr||국립
+제주국제대학교|4|jeju.ac.kr||
+제주관광대학교|2|ctc.ac.kr||
+제주한라대학교|2|chu.ac.kr||`
+};
+// 대학명|특색|대표·이색 학과(쉼표 구분)
+const INFO_TXT=`감리교신학대학교|기독교대한감리회 목회자를 기르는 신학대학|신학과, 기독교교육과, 교회음악과
+건국대학교|축산대학에서 출발해 동물·생명과학 분야가 강하고, 호수(일감호)를 낀 캠퍼스로 유명|수의예과, 동물자원과학과, 줄기세포재생공학과, 부동산학과
+경희대학교|서울·국제 두 캠퍼스 체제, 한의학·호텔관광 분야의 전통이 깊음|한의예과, 호텔경영학과, 조리&푸드디자인학과, 우주과학과
+고려대학교|경영·법·의학 등 전 분야 최상위권의 종합대학|사이버국방학과, 반도체공학과, 스마트보안학부, 식품자원경제학과
+광운대학교|전자·정보통신 분야에서 출발한 공학 중심 대학|전자공학과, 로봇학부, 정보융합학부
+국민대학교|자동차·디자인 분야 특성화로 알려진 대학|자동차공학과, 자동차IT융합학과, 공업디자인학과, 산림환경시스템학과
+덕성여자대학교|약학·유아교육이 강한 여자대학|약학과, 유아교육과, 가상현실융합학과
+동국대학교|불교 종립대학, 영화·연극·경찰행정 분야 전통|불교학부, 경찰행정학부, 연극학부, 영화영상학과
+동덕여자대학교|예술·디자인·공연 분야가 강한 여자대학|패션디자인학과, 커뮤니케이션디자인학과, 실용음악과, 방송연예과
+명지대학교|인문(서울)·자연(용인) 두 캠퍼스, 국내 유일 바둑학과 운영|바둑학과, 미술사학과, 디지털미디어학과
+삼육대학교|재림교회 계열, 약학·보건 분야 특화|약학과, 물리치료학과, 항공관광외국어학부
+상명대학교|사범·예술 분야 전통, 서울·천안 캠퍼스|역사콘텐츠학과, 문헌정보학과, 게임전공
+서강대학교|예수회가 세운 소규모 명문, 경제·경영 분야 강세|아트&테크놀로지학과, 시스템반도체공학과, 경제학과
+서경대학교|미용예술·공연예술 특성화|미용예술학과, 뮤지컬전공, 실용음악전공
+서울과학기술대학교|국립 공학 중심 대학, 실무형 공학 교육|안경광학과, 문예창작학과, 기계시스템디자인공학과
+서울교육대학교|서울 지역 초등교원 양성 국립대학|초등교육과
+서울대학교|대표 국립대학, 전 분야 최상위|자유전공학부, 첨단융합학부, 조경·지역시스템공학부
+서울시립대학교|서울시가 설립한 공립대학, 등록금이 낮은 편이며 도시 분야 강세|도시공학과, 도시행정학과, 세무학과, 조경학과
+서울여자대학교|기독교 여자대학, 바롬인성교육으로 유명|문헌정보학과, 원예생명조경학과, 데이터사이언스학과
+성공회대학교|인권·사회과학 중심의 소규모 대학|사회융합자율학부, 미디어컨텐츠융합자율학부
+성균관대학교|인문사회(서울)·자연과학(수원) 캠퍼스, 삼성전자 계약학과 운영|반도체시스템공학과, 소프트웨어학과, 유학·동양학과
+성신여자대학교|간호·뷰티 등 실용 분야가 강한 여자대학|뷰티산업학과, 간호학과, 서비스·디자인공학과
+세종대학교|호텔관광·애니메이션 분야 특성화|호텔관광경영학부, 만화애니메이션텍전공, 국방시스템공학과, 항공시스템공학과
+숙명여자대학교|약학·경영 분야가 강한 여자대학|약학부, 르꼬르동블루외식경영전공, 문화관광외식학부
+숭실대학교|기독교 대학, IT·소프트웨어 분야 강세|AI융합학부, 소프트웨어학부, 정보보호학과, 벤처중소기업학과
+연세대학교|의학·경영·국제 분야가 강한 사립 종합대학|언더우드국제대학, 시스템반도체공학과, 글로벌인재학부
+이화여자대학교|국내 최대 여자대학, 전 분야 종합대학|스크랜튼학부, 뇌·인지과학전공, 휴먼기계바이오공학부
+장로회신학대학교|대한예수교장로회(통합) 목회자 양성|신학과, 기독교교육과
+중앙대학교|약학·공연영상·예술 분야 강세, 서울·안성 캠퍼스|약학부, 공연영상창작학부, 문헌정보학과, 첨단소재공학과
+총신대학교|대한예수교장로회(합동) 목회자 양성|신학과, 기독교교육과, 아동학과
+추계예술대학교|미술·음악 중심의 예술대학|동양화과, 작곡과, 영상시나리오과
+한국예술종합학교|문체부 소속 국립 예술 특수대학, 학사학위 인정|연극원, 영상원, 무용원, 전통예술원
+한국외국어대학교|외국어·지역학 특화, 40여 개 언어 전공 운영|아랍어과, 스칸디나비아어과, 이란어과, 우크라이나어과
+한국체육대학교|국립 체육 특화 대학, 국가대표 선수 다수 배출|체육학과, 운동건강관리학과, 사회체육학과
+한성대학교|디자인·IT 분야 특성화|패션디자인, 크리에이티브인문학부, 상상력인재학부
+한양대학교|실용학풍의 공학 명문, 서울·ERICA 캠퍼스|반도체공학과, 원자력공학과, 미래자동차공학과, 데이터사이언스학부
+홍익대학교|미술·디자인·건축 분야 최상위|미술대학, 건축학부, 시각디자인과, 게임학부
+육군사관학교|육군 정규장교 양성, 학비 전액 국비·졸업 후 소위 임관|인문·이공 생도 과정
+동양미래대학교|서울의 대표 공업계 전문대학|기계공학과, 로봇자동화공학과, 컴퓨터소프트웨어공학과
+배화여자대학교|서울 도심의 여자 전문대학|전통조리과, 비서행정과
+삼육보건대학교|보건계열 특화 전문대학|간호학과, 임상병리과, 치위생과
+서울여자간호대학교|간호 단일 계열 전문대학|간호학과
+한국폴리텍대학|고용노동부 산하 직업교육 대학, 전국에 캠퍼스|산업설비자동화과, 전기과, 인공지능소프트웨어과
+인하대학교|한진그룹 재단, 공학·물류·항공 분야 강세|항공우주공학과, 아태물류학부, 의예과
+인천대학교|인천시립대에서 국립대로 전환, 송도 캠퍼스|동북아국제통상학부, 해양학과, 도시공학과
+경인교육대학교|인천·경기 지역 초등교원 양성 국립대학|초등교육과
+인천가톨릭대학교|가톨릭 신학·조형예술 중심 대학|신학과, 조형예술대학
+인하공업전문대학|항공 분야 특화 전문대학|항공운항과, 항공기계과, 항공경영과
+가천대학교|성남·인천 캠퍼스, 의료·바이오·반도체 분야 강세|한의예과, 반도체대학, 바이오나노학과
+가톨릭대학교|가톨릭 의료 네트워크, 의학·간호 명문(성심교정 부천)|의예과, 간호학과, 약학과, 미디어기술콘텐츠학과
+강남대학교|사회복지 분야 전통이 깊은 기독교 대학|사회복지학부, 실버산업학과
+경기대학교|관광·경호 분야 특성화|관광개발학과, 경호보안학과, 범죄교정심리학과
+단국대학교|죽전(인문·공학)·천안(의학·자연) 캠퍼스|모바일시스템공학과, 소프트웨어학과, 공연영화학부
+수원대학교|화성 소재 종합대학|건축학과, 음악학부, 영화영상학부
+아주대학교|공학·의학 분야 강세, 수원 소재|의예과, 국방디지털융합학과, 금융공학과, 응용화학생명공학과
+용인대학교|무도·체육 분야 특성화|유도학과, 태권도학과, 경호학과, 무용과
+을지대학교|보건의료 특화 대학|의예과, 임상병리학과, 장례지도학과, 응급구조학과
+차의과학대학교|차병원 계열 의생명 특화 대학|약학과, 미술치료학과, 바이오공학
+한경국립대학교|안성 소재 국립대학(한경대·한국복지대 통합)|식물생명환경과학과, 동물생명융합학부
+한국공학대학교|시흥 소재 산학협력 특화 공대(옛 한국산업기술대)|기계공학과, 메카트로닉스공학부, 반도체공학과
+한국항공대학교|항공·우주 특성화 대학|항공운항학과, 항공우주공학과, 항공교통물류학부
+한신대학교|신학·사회과학 전통, 오산 소재|신학과, 재활학과
+한양대학교 ERICA|한양대 안산 캠퍼스, 산학협력 특화|로봇공학과, 약학과, 국방정보공학과
+계원예술대학교|디자인·예술 특화 전문대학|애니메이션과, 리빙디자인과, 산업디자인과
+농협대학교|농협 인재 양성 전문대학, 농협 취업 연계|협동조합경영과
+동남보건대학교|보건 분야 특화 전문대학|간호학과, 치위생과, 안경광학과
+동아방송예술대학교|방송·공연 분야 특화 전문대학|방송영상과, 방송기술과, 음향제작과
+신구대학교|원예·보건·사진 분야로 알려진 전문대학|원예디자인과, 치기공과, 사진영상미디어과
+유한대학교|유한양행 창업자 유일한 박사가 설립한 전문대학|보건의료행정과, 제약바이오
+청강문화산업대학교|만화·게임·애니메이션 특화 전문대학|만화콘텐츠스쿨, 게임스쿨, 애니메이션스쿨
+한국관광대학교|관광·호텔 분야 특화 전문대학|호텔경영과, 항공서비스과
+강원대학교|강원권 거점 국립대학|수의예과, 산림과학부, 동물산업융합학과
+강릉원주대학교|치의학을 보유한 강원 국립대학|치의예과, 해양생명과학
+가톨릭관동대학교|강릉 소재 가톨릭 대학|의예과, 경찰행정학과
+상지대학교|한의학을 보유한 원주 소재 대학|한의예과
+춘천교육대학교|강원 지역 초등교원 양성 국립대학|초등교육과
+한림대학교|한림대의료원 계열, 의학·언어청각 분야 특성화|의예과, 언어청각학부, 미디어스쿨
+연세대학교 미래캠퍼스|연세대 원주 캠퍼스, 보건과학 특성화|의예과(원주), 방사선학과, 임상병리학과
+충북대학교|충북 거점 국립대학|수의예과, 약학과, 제약학과
+한국교통대학교|철도 분야 특화 국립대학(충주·증평·의왕)|철도운전시스템공학과, 철도경영·물류학과, 항공운항
+한국교원대학교|초·중등 교원 양성 국립대학|초등교육과, 각 교과교육과
+청주교육대학교|충북 지역 초등교원 양성 국립대학|초등교육과
+청주대학교|항공·연극영화 분야로 알려진 청주 사립대학|항공운항학과, 연극영화학과
+세명대학교|한의학을 보유한 제천 소재 대학|한의예과
+꽃동네대학교|사회복지 특화 대학|사회복지학과
+건국대학교 글로컬캠퍼스|건국대 충주 캠퍼스|의예과, 바이오, 디자인
+공군사관학교|공군 정규장교 양성, 학비 전액 국비|생도 과정
+충북도립대학교|충북도가 운영하는 공립 전문대학|소방, 바이오
+고려대학교 세종캠퍼스|고려대 세종 캠퍼스|약학과, 사이버보안, 문화창의
+홍익대학교 세종캠퍼스|홍익대 세종 캠퍼스, 게임·영상 분야|게임학부, 영상·애니메이션
+한국영상대학교|영상·방송 분야 특화 전문대학|방송영상, 연기
+충남대학교|대전·충남 거점 국립대학|수의예과, 약학과, 자율운항시스템공학과
+한밭대학교|대전의 국립 공학 중심 대학|공학 계열 전반
+KAIST|이공계 특수대학, 무학과 입학 후 전공 선택, 수업료 지원|새내기과정학부(무학과), 전산학부, 바이오및뇌공학과
+대전대학교|한의학 강세, 군사학과 운영|한의예과, 군사학과
+목원대학교|음악·미술 분야가 강한 감리교 대학|음악대학, 미술·디자인대학, 게임
+우송대학교|외식조리·철도·글로벌 경영 특화|솔브릿지국제경영대학, 외식조리, 철도건설
+국군간호사관학교|간호장교 양성, 학비 전액 국비|간호학
+대전보건대학교|보건 분야 특화 전문대학, 과학수사과로 알려짐|과학수사과, 간호학과, 임상병리과
+공주대학교|사범대학 전통이 깊은 충남 국립대학|사범대학 교과교육과, 만화애니메이션
+공주교육대학교|충남 지역 초등교원 양성 국립대학|초등교육과
+순천향대학교|의학·의료 분야 강세, 아산 소재|의예과, 의료IT공학과, 스마트팩토리
+호서대학교|공학 중심 대학(아산·천안)|반도체, 자동차ICT
+나사렛대학교|장애인 재활 분야 특화|재활자립학과, 언어치료학과
+한국기술교육대학교|고용노동부가 세운 공학·인적자원개발 특화 대학|기계공학부, 메카트로닉스공학부, 산업경영학부
+건양대학교|의료 특화(논산·대전), 군사학과 운영|의예과, 의료IT, 군사학과
+한서대학교|항공 분야 특화(서산·태안 비행장 보유)|항공운항학과, 항공기계, 항공관광
+한국전통문화대학교|국가유산청 소속 국립대학, 전통문화 특화|전통건축학과, 문화유산보존학과
+경찰대학|경찰간부 양성 특수대학|치안대학
+단국대학교 천안캠퍼스|단국대 천안 캠퍼스, 의·치의학 보유|의예과, 치의예과, 무용
+상명대학교 천안캠퍼스|상명대 천안 캠퍼스, 디자인·애니메이션|만화애니메이션, 디자인
+아주자동차대학교|자동차 분야 특화 전문대학|자동차과
+연암대학교|LG가 세운 농업·생명 특화 전문대학|스마트원예, 반려동물
+전북대학교|전북 거점 국립대학|수의예과, 약학과, 농생명
+군산대학교|해양·수산 분야가 강한 국립대학|해양생산, 조선해양
+전주교육대학교|전북 지역 초등교원 양성 국립대학|초등교육과
+원광대학교|원불교 계열, 한의·치의·약학 모두 보유|한의예과, 치의예과, 약학과
+우석대학교|한의학·약학 보유(전주·진천)|한의예과, 약학과
+전주대학교|기독교 대학, 문화관광·한식 분야 특성화|문화관광, 한식조리
+백제예술대학교|실용음악·방송연예 특화 전문대학|실용음악, 방송연예
+전남대학교|호남 거점 국립대학|의예과, 수의예과, 약학
+조선대학교|시민 모금으로 세운 민립대학, 의·치·약학 보유|의예과, 치의예과, 약학
+광주교육대학교|광주·전남 지역 초등교원 양성 국립대학|초등교육과
+GIST 광주과학기술원|이공계 특수대학, 무학과 입학 후 전공 선택|기초교육학부
+기독간호대학교|간호 단일 계열 전문대학|간호학과
+조선간호대학교|간호 단일 계열 전문대학|간호학과
+목포대학교|전남 서부권 국립대학|해양, 도시
+순천대학교|전남 동부권 국립대학, 애니메이션 분야로도 알려짐|만화애니메이션, 농생명
+목포해양대학교|해기사(항해사·기관사)를 양성하는 해양 특화 국립대학|항해학부, 기관시스템공학부, 해양경찰학부
+한국에너지공과대학교|에너지 분야 특화 이공계 대학(나주)|에너지공학부
+전남도립대학교|전남도가 운영하는 공립 전문대학|소방, 경찰
+경북대학교|대구·경북 거점 국립대학|의예과, 수의예과, 모바일공학
+계명대학교|의학·음악·디자인 분야가 강한 기독교 대학|의예과, 음악공연예술, 패션디자인
+대구교육대학교|대구·경북 지역 초등교원 양성 국립대학|초등교육과
+DGIST 대구경북과학기술원|이공계 특수대학, 단일 학부 무학과 운영|기초학부
+영진전문대학교|기업 주문식 교육으로 알려진 전문대학|컴퓨터정보계열, 반도체
+대구보건대학교|보건 분야 특화 전문대학|간호, 임상병리, 방사선
+영남대학교|경산 소재 대형 사립대학, 새마을 분야 특화|의예과, 약학, 새마을국제개발
+대구대학교|특수교육·재활 분야의 국내 대표 대학|특수교육과, 언어치료학과, 재활
+대구가톨릭대학교|가톨릭 계열, 의학·약학 보유|의예과, 약학
+대구한의대학교|한의학 특화 대학|한의예과, 화장품
+POSTECH 포항공과대학교|연구중심 이공계 대학, 무학과 입학|무은재학부
+한동대학교|기독교 대학, 무전공 입학 후 복수전공 체제|글로벌리더십학부
+금오공과대학교|구미 산업단지 기반 국립 공과대학|기계, 전자
+국립경국대학교|안동대와 경북도립대가 통합한 국립대학|민속학과, 한문
+동양대학교|철도 분야로 알려진 영주 소재 대학|철도
+동국대학교 WISE캠퍼스|동국대 경주 캠퍼스, 의·한의학 보유|의예과, 한의예과
+울산대학교|현대중공업 재단, 공학·의학(서울아산병원) 강세|의예과, 조선해양공학
+UNIST 울산과학기술원|이공계 특수대학, 무학과 입학 후 전공 선택|이공계열, 경영
+울산과학대학교|현대 계열 공학 중심 전문대학|기계, 전기
+부산대학교|부산·울산·경남 거점 국립대학|의예과, 약학, 조선해양공학
+부경대학교|해양·수산 분야가 강한 국립대학|해양공학, 수산생명의학, 식품공학
+한국해양대학교|해양 특화 국립대학, 해사대학 운영|항해융합학부, 기관시스템공학부, 해양경찰학과
+부산교육대학교|부산 지역 초등교원 양성 국립대학|초등교육과
+동아대학교|의학을 보유한 부산 대형 사립대학|의예과
+동의대학교|한의학 보유 부산 사립대학|한의예과
+경성대학교|약학·연극영화 분야로 알려진 대학|약학, 연극영화
+동서대학교|영상·디자인 특화, 임권택영화예술대학 운영|영화, 디자인, 게임
+부산외국어대학교|외국어·지역학 특화|외국어 전공
+고신대학교|기독교 대학, 의학 보유|의예과, 간호
+부산가톨릭대학교|보건 분야 특화 가톨릭 대학|간호, 임상병리, 방사선
+경상국립대학교|경남 거점 국립대학(경상대·경남과기대 통합)|의예과, 수의예과, 항공우주
+창원대학교|창원 산업단지 기반 국립대학, 기계·방산 분야|메카트로닉스, 방산
+진주교육대학교|경남 지역 초등교원 양성 국립대학|초등교육과
+인제대학교|백병원 계열, 의학 분야 강세|의예과
+해군사관학교|해군 정규장교 양성, 학비 전액 국비|생도 과정
+연암공과대학교|LG가 세운 공학 전문대학, LG 계열 취업 연계|스마트전기전자, 기계
+거제대학교|조선 산업 특화 전문대학|조선, 해양
+한국승강기대학교|승강기 분야 특화 전문대학|승강기
+제주대학교|제주 거점 국립대학, 해양·관광 분야|의예과, 수의예과, 해양
+제주관광대학교|관광 분야 특화 전문대학|관광, 호텔`;
+const INFO={};
+for(const l of INFO_TXT.trim().split("\n")){const [n,f,m]=l.split("|");INFO[n]={f,m:(m||"").split(",").map(s=>s.trim()).filter(Boolean)}}
+// 취업률·등록금: 대학알리미 공시 파일을 불러와 채움(이 브라우저에만 저장)
+let STATS={},STATS_SRC="";
+try{const s=JSON.parse(localStorage.getItem("unimap-stats")||"null");if(s){STATS=s.d||{};STATS_SRC=s.src||""}}catch(e){}
+const norm=s=>String(s||"").replace(/\s|\(.*?\)|_.*$|본교|제\d캠퍼스/g,"");
+
+const DATA={};
+for(const [k] of REGIONS){DATA[k]=D[k].trim().split("\n").map(l=>{const [n,t,h,a,note]=l.split("|");return{n,t,h,a,note:note||""}});}
+const nameOf=Object.fromEntries(REGIONS);
+const S={r:"seoul",t:"all",q:""};
+try{const s=JSON.parse(localStorage.getItem("unimap")||"{}");if(s.r&&(s.r==="all"||nameOf[s.r]))S.r=s.r;if(s.t)S.t=s.t;}catch(e){}
+const $=id=>document.getElementById(id);
+const enc=encodeURIComponent;
+function save(){try{localStorage.setItem("unimap",JSON.stringify({r:S.r,t:S.t}))}catch(e){}}
+
+const map=$("map");
+let total4=0,total2=0;
+for(const [k,label] of REGIONS){
+  const u=DATA[k].filter(x=>x.t==="4").length,c=DATA[k].length-u;total4+=u;total2+=c;
+  const b=document.createElement("button");b.type="button";b.className="tile";b.style.gridArea=k;b.dataset.r=k;
+  b.innerHTML=`<b>${label}</b><small>4년제 ${u} · 전문 ${c}</small>`;
+  b.onclick=()=>{S.r=k;save();render()};map.appendChild(b);
+}
+$("total").textContent=`4년제 ${total4} · 전문대 ${total2}`;
+map.appendChild($("allbtn"));
+$("allbtn").onclick=()=>{S.r="all";save();render()};
+$("q").addEventListener("input",e=>{S.q=e.target.value.trim();render()});
+document.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{S.t=b.dataset.t;save();render()});
+
+function item(x,region){
+  const home=x.h?`https://www.${x.h.replace(/^www\./,"")}`:null;
+  const fixHome=x.h&&/^(erica|mirae|sejong|wise)\./.test(x.h)?`https://${x.h}`:home;
+  const adm=x.a?`https://${x.a}`:null;
+  const searchAdm=`https://search.naver.com/search.naver?query=${enc(x.n+" 입학처")}`;
+  const searchHome=`https://search.naver.com/search.naver?query=${enc(x.n)}`;
+  const mapUrl=`https://map.naver.com/p/search/${enc(x.n)}`;
+  const chip=x.t==="4"?'<span class="chip u">4년제</span>':'<span class="chip c">전문대</span>';
+  const inf=INFO[x.n], st=STATS[norm(x.n)];
+  const open=OPEN.has(x.n);
+  const detail=`<div class="detail" ${open?"":"hidden"}>
+    <div class="drow"><span class="dl">특색</span><span>${inf?inf.f:`<span class="muted">정리된 특색 정보가 없습니다. 홈페이지나 대학알리미에서 확인하세요.</span>`}</span></div>
+    ${inf&&inf.m.length?`<div class="drow"><span class="dl">대표·이색 학과</span><span class="majors">${inf.m.map(m=>`<span class="mj">${m}</span>`).join("")}</span></div>`:""}
+    <div class="drow"><span class="dl">취업률·등록금</span><span class="stats">${st?`<span class="stat"><small>취업률</small><b>${st.e??"–"}</b></span><span class="stat"><small>평균 등록금</small><b>${st.t??"–"}</b></span>${STATS_SRC?`<small class="muted">${STATS_SRC}</small>`:""}`:`<span class="muted">${Object.keys(STATS).length?"불러온 파일에 이 대학 자료가 없습니다.":"위쪽 '취업률·등록금 불러오기'에서 대학알리미 공시 파일을 넣으면 표시됩니다."}</span>`}</span></div>
+    <div class="drow"><span class="dl">더 알아보기</span><span class="links">
+      <a href="https://www.academyinfo.go.kr" target="_blank" rel="noopener">대학알리미</a>
+      <a href="https://search.naver.com/search.naver?query=${enc(x.n+" 취업률")}" target="_blank" rel="noopener">취업률 검색</a>
+      <a href="https://search.naver.com/search.naver?query=${enc(x.n+" 등록금")}" target="_blank" rel="noopener">등록금 검색</a>
+      <a href="https://search.naver.com/search.naver?query=${enc(x.n+" 학과")}" target="_blank" rel="noopener">학과 검색</a>
+    </span></div></div>`;
+  return `<li><span class="name">${x.n}${x.note?`<em>${x.note}</em>`:""}${region?`<em>${nameOf[region]}</em>`:""}${inf?`<span class="feat">${inf.f}</span>`:""}</span>${chip}
+  <span class="links"><button type="button" class="more" data-n="${x.n}" aria-expanded="${open}">정보 ${open?"▴":"▾"}</button>
+   ${adm?`<a class="adm" href="${adm}" target="_blank" rel="noopener">입학처</a>`:`<a class="adm" href="${searchAdm}" target="_blank" rel="noopener">입학처</a>`}
+   ${fixHome?`<a href="${fixHome}" target="_blank" rel="noopener">홈페이지</a>`:`<a href="${searchHome}" target="_blank" rel="noopener">홈페이지</a>`}
+   <a href="${mapUrl}" target="_blank" rel="noopener">지도</a>
+  </span>${detail}</li>`;
+}
+function render(){
+  document.querySelectorAll(".tile").forEach(t=>t.setAttribute("aria-pressed",String(t.dataset.r===S.r)));
+  $("allbtn").setAttribute("aria-pressed",String(S.r==="all"));
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.t===S.t)));
+  const keys=S.r==="all"||S.q?REGIONS.map(r=>r[0]):[S.r];
+  let rows=[];
+  for(const k of keys)for(const x of DATA[k])rows.push({...x,k});
+  if(S.t!=="all")rows=rows.filter(x=>x.t===S.t);
+  if(S.q)rows=rows.filter(x=>{const i=INFO[x.n];return (x.n+x.note+nameOf[x.k]+(i?i.f+i.m.join(""):"")).includes(S.q)});
+  $("rtitle").textContent=S.q?`"${S.q}" 검색 결과`:(S.r==="all"?"전국":nameOf[S.r]);
+  const n4=rows.filter(x=>x.t==="4").length;
+  $("rcount").textContent=`4년제 ${n4} · 전문대 ${rows.length-n4}`;
+  if(!rows.length){$("list").innerHTML=`<div class="empty">조건에 맞는 대학이 없습니다. 검색어를 줄이거나 유형을 '전체'로 바꿔 보세요.</div>`;return}
+  const multi=keys.length>1;
+  let html="";
+  for(const [t,label] of [["4","4년제 대학"],["2","전문대학"]]){
+    const g=rows.filter(x=>x.t===t);if(!g.length)continue;
+    html+=`<section class="group"><h3>${label} ${g.length}곳</h3><ul class="unis">${g.map(x=>item(x,multi?x.k:null)).join("")}</ul></section>`;
+  }
+  $("list").innerHTML=html;
+}
+const OPEN=new Set();
+$("list").addEventListener("click",e=>{
+  const b=e.target.closest(".more");if(!b)return;
+  const n=b.dataset.n,d=b.closest("li").querySelector(".detail");
+  const o=d.hidden;d.hidden=!o;b.setAttribute("aria-expanded",String(o));b.textContent="정보 "+(o?"▴":"▾");
+  o?OPEN.add(n):OPEN.delete(n);
+});
+function fmtE(v){if(v==null||v==="")return null;const n=parseFloat(String(v).replace(/[,%\s]/g,""));if(isNaN(n))return null;return (n<=1?n*100:n).toFixed(1)+"%"}
+function fmtT(v,unitThousand){if(v==null||v==="")return null;let n=parseFloat(String(v).replace(/[,\s원]/g,""));if(isNaN(n))return null;if(unitThousand)n*=1000;return Math.round(n/10000).toLocaleString("ko-KR")+"만 원"}
+function ingest(rows,fname){
+  let hi=rows.findIndex(r=>r.some(c=>/학교명|대학명/.test(String(c))));
+  if(hi<0){$("impmsg").textContent="학교명(또는 대학명) 열을 찾지 못했습니다. 첫 줄에 '학교명' 머리글이 있는 파일인지 확인하세요.";return}
+  const h=rows[hi].map(c=>String(c));
+  const ni=h.findIndex(c=>/학교명|대학명/.test(c));
+  const ei=h.findIndex(c=>/취업률/.test(c));
+  let ti=h.findIndex(c=>/평균.*등록금|등록금.*평균/.test(c));if(ti<0)ti=h.findIndex(c=>/등록금/.test(c));
+  if(ei<0&&ti<0){$("impmsg").textContent="'취업률' 또는 '등록금' 열을 찾지 못했습니다.";return}
+  const thousand=ti>=0&&/천원/.test(h[ti]);
+  const add={};let cnt=0;
+  for(const r of rows.slice(hi+1)){const nm=norm(r[ni]);if(!nm)continue;
+    const cur=add[nm]||STATS[nm]||{};const e=ei>=0?fmtE(r[ei]):null,t=ti>=0?fmtT(r[ti],thousand):null;
+    if(e||t){add[nm]={e:e||cur.e,t:t||cur.t};cnt++}}
+  Object.assign(STATS,add);STATS_SRC="출처: "+fname;
+  try{localStorage.setItem("unimap-stats",JSON.stringify({d:STATS,src:STATS_SRC}))}catch(e){}
+  const known=new Set(Object.values(DATA).flat().map(x=>norm(x.n)));
+  const hit=Object.keys(add).filter(k=>known.has(k)).length;
+  $("impmsg").textContent=`${fname}에서 ${cnt}개 행을 읽었고, 이 지도의 대학 ${hit}곳에 연결했습니다.`;
+  render();
+}
+$("impfile").addEventListener("change",async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    if(/\.csv$/i.test(f.name)){
+      const buf=await f.arrayBuffer();let txt=new TextDecoder("utf-8").decode(buf);if(txt.includes(String.fromCharCode(0xFFFD)))txt=new TextDecoder("euc-kr").decode(buf);
+      ingest(txt.split(/\r?\n/).map(l=>l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(c=>c.replace(/,$/,"").replace(/^"|"$/g,"").replace(/""/g,'"'))),f.name);
+    }else{
+      if(!window.XLSX){$("impmsg").textContent="엑셀 읽기 도구를 불러오지 못했습니다. CSV로 저장해 다시 넣어 주세요.";return}
+      const wb=XLSX.read(await f.arrayBuffer());
+      for(const sn of wb.SheetNames){ingest(XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:""}),f.name)}
+    }
+  }catch(err){$("impmsg").textContent="파일을 읽지 못했습니다: "+err.message}
+  e.target.value="";
+});
+$("impclear").onclick=()=>{STATS={};STATS_SRC="";try{localStorage.removeItem("unimap-stats")}catch(e){};$("impmsg").textContent="불러온 취업률·등록금 자료를 지웠습니다.";render()};
+render();
+// ===== 전국대학지도 =====
+const GEO={"감리교신학대학교":[126.9432,37.5742],"건국대학교":[127.0925,37.5453],"경희대학교":[127.0609,37.5798],"고려대학교":[127.0261,37.6034],"광운대학교":[127.0816,37.6496],"국민대학교":[127.0184,37.6065],"덕성여자대학교":[127.0355,37.6642],"동국대학교":[126.999,37.5568],"동덕여자대학교":[127.0232,37.5976],"명지대학교":[126.9356,37.5773],"삼육대학교":[127.0739,37.6527],"상명대학교":[126.9824,37.5913],"서강대학교":[126.915,37.5562],"서경대학교":[127.0278,37.6088],"서울과학기술대학교":[127.0787,37.6439],"서울교육대학교":[127.0319,37.4713],"서울기독대학교":[126.9301,37.6164],"서울대학교":[126.9469,37.4642],"서울시립대학교":[127.0532,37.5829],"서울여자대학교":[127.0833,37.6551],"서울한영대학교":[126.8657,37.4931],"성공회대학교":[126.858,37.4962],"성균관대학교":[126.9747,37.5944],"성신여자대학교":[127.0131,37.6021],"세종대학교":[127.0848,37.5484],"숙명여자대학교":[126.982,37.5307],"숭실대학교":[126.9578,37.4973],"연세대학교":[126.9404,37.5684],"이화여자대학교":[126.9449,37.5796],"장로회신학대학교":[127.0897,37.5395],"중앙대학교":[126.9501,37.5004],"총신대학교":[126.9549,37.4915],"추계예술대학교":[126.9302,37.5729],"한국성서대학교":[127.0686,37.6483],"한국예술종합학교":[127.0316,37.5988],"한국외국어대학교":[127.0581,37.574],"한국체육대학교":[127.1177,37.5018],"한성대학교":[127.0196,37.6123],"한양대학교":[127.0458,37.5483],"홍익대학교":[126.9074,37.5593],"KC대학교":[126.832,37.5579],"육군사관학교":[127.0871,37.6451],"동양미래대학교":[126.8629,37.4873],"명지전문대학":[126.9487,37.5697],"배화여자대학교":[126.9795,37.5855],"삼육보건대학교":[127.0626,37.5852],"서울여자간호대학교":[126.9368,37.5832],"서일대학교":[127.0949,37.5948],"숭의여자대학교":[126.9914,37.5599],"인덕대학교":[127.0751,37.6586],"한양여자대학교":[127.0381,37.5513],"한국폴리텍대학":[126.8243,37.561],"인하대학교":[126.671,37.4508],"인천대학교":[126.6549,37.3889],"경인교육대학교":[126.7421,37.5546],"인천가톨릭대학교":[126.6472,37.392],"경인여자대학교":[126.7345,37.5577],"인하공업전문대학":[126.6633,37.4539],"인천재능대학교":[126.6412,37.48],"가천대학교":[127.136,37.4135],"가톨릭대학교":[126.8015,37.4978],"강남대학교":[127.1335,37.265],"경기대학교":[127.0276,37.2797],"단국대학교":[127.0735,37.3308],"대진대학교":[127.2631,37.9673],"루터대학교":[127.113,37.2732],"서울신학대학교":[126.781,37.506],"성결대학교":[126.9447,37.4007],"수원대학교":[126.8867,37.1624],"신한대학교":[127.079,37.7331],"아세아연합신학대학교":[127.3031,37.4],"아주대학교":[127.0071,37.2879],"안양대학교":[126.9243,37.4089],"용인대학교":[127.2641,37.1995],"을지대학교":[127.1155,37.4217],"차의과학대학교":[127.2426,37.9755],"칼빈대학교":[127.1259,37.2496],"평택대학교":[127.0074,37.0132],"한경국립대학교":[127.3154,37.0312],"한국공학대학교":[126.7988,37.3861],"한국항공대학교":[126.8125,37.6689],"한세대학교":[126.9256,37.3418],"한신대학교":[127.064,37.1609],"협성대학교":[126.8662,37.1706],"한양대학교 ERICA":[126.8741,37.3121],"경기과학기술대학교":[126.7783,37.3943],"경민대학교":[127.0585,37.7413],"경복대학교":[127.2445,37.6601],"계원예술대학교":[126.9931,37.3601],"국제대학교":[126.9869,37.0214],"김포대학교":[126.628,37.6755],"농협대학교":[126.792,37.6771],"대림대학교":[126.9371,37.3853],"동남보건대학교":[127.02,37.2643],"동서울대학교":[127.1283,37.3981],"동아방송예술대학교":[127.2949,37.0394],"두원공과대학교":[127.3078,37.0158],"부천대학교":[126.7939,37.4823],"서정대학교":[127.0034,37.806],"수원과학대학교":[126.8791,37.147],"수원여자대학교":[127.0322,37.2941],"신구대학교":[127.1405,37.4279],"신안산대학교":[126.8427,37.3155],"안산대학교":[126.8222,37.3237],"여주대학교":[127.6179,37.2999],"연성대학교":[126.9493,37.4152],"오산대학교":[127.0435,37.1691],"용인예술과학대학교":[127.2436,37.2077],"유한대학교":[126.8061,37.5122],"장안대학교":[126.8913,37.1769],"청강문화산업대학교":[127.4912,37.2082],"한국관광대학교":[127.4707,37.2164],"한국복지대학교":[126.9998,36.9978],"강원대학교":[127.7517,37.8875],"강릉원주대학교":[128.8444,37.7066],"가톨릭관동대학교":[128.824,37.7148],"경동대학교":[128.4021,38.374],"상지대학교":[127.9434,37.3053],"춘천교육대학교":[127.7312,37.8957],"한라대학교":[127.9229,37.3135],"한림대학교":[127.7441,37.8721],"연세대학교 미래캠퍼스":[127.9358,37.2898],"강릉영동대학교":[128.8368,37.6912],"강원관광대학교":[128.9823,37.1702],"세경대학교":[128.5043,37.2003],"송곡대학교":[127.7563,37.902],"송호대학교":[128.0799,37.5069],"한림성심대학교":[127.7171,37.8839],"충북대학교":[127.4809,36.6401],"한국교통대학교":[127.9066,37.0128],"한국교원대학교":[127.5105,36.6239],"청주교육대학교":[127.4604,36.6483],"청주대학교":[127.4733,36.6247],"서원대학교":[127.4854,36.6546],"세명대학교":[128.1526,37.0564],"극동대학교":[127.6264,36.9728],"중원대학교":[127.8311,36.7665],"꽃동네대학교":[127.49,36.6321],"유원대학교":[127.8166,36.1569],"건국대학교 글로컬캠퍼스":[127.8861,37.021],"공군사관학교":[127.5029,36.6084],"충북보건과학대학교":[127.5151,36.6383],"충청대학교":[127.4759,36.6203],"대원대학교":[128.1321,37.0646],"강동대학교":[127.6059,36.981],"충북도립대학교":[127.6597,36.3183],"고려대학교 세종캠퍼스":[127.2693,36.5576],"홍익대학교 세종캠퍼스":[127.2488,36.5658],"한국영상대학교":[127.2617,36.5422],"충남대학교":[127.3402,36.3755],"한밭대학교":[127.3325,36.3786],"KAIST":[127.3373,36.3697],"대전대학교":[127.4816,36.3221],"목원대학교":[127.3511,36.2766],"배재대학교":[127.3434,36.2797],"우송대학교":[127.474,36.3252],"한남대학교":[127.4443,36.4063],"대전신학대학교":[127.4366,36.4093],"침례신학대학교":[127.3419,36.3809],"국군간호사관학교":[127.3272,36.3742],"대덕대학교":[127.3457,36.3709],"대전과학기술대학교":[127.3482,36.2708],"대전보건대학교":[127.4788,36.3163],"우송정보대학":[127.4833,36.3275],"공주대학교":[127.0861,36.4764],"공주교육대학교":[127.0656,36.4846],"순천향대학교":[126.9925,36.8045],"호서대학교":[126.972,36.8127],"선문대학교":[126.9849,36.7891],"백석대학교":[127.2329,36.761],"남서울대학교":[127.1737,36.89],"나사렛대학교":[127.1532,36.8982],"한국기술교육대학교":[127.2124,36.7692],"건양대학교":[127.1688,36.1884],"중부대학교":[127.4815,36.1163],"청운대학교":[126.634,36.5671],"한서대학교":[126.4651,36.7876],"금강대학교":[127.1483,36.1966],"한국전통문화대학교":[126.8598,36.2437],"경찰대학":[126.997,36.819],"단국대학교 천안캠퍼스":[127.2253,36.7456],"상명대학교 천안캠퍼스":[127.2375,36.7754],"신성대학교":[126.6549,36.9001],"아주자동차대학교":[126.6041,36.3421],"연암대학교":[127.1661,36.8746],"백석문화대학교":[127.1983,36.7574],"혜전대학교":[126.6136,36.5753],"전북대학교":[127.1132,35.856],"군산대학교":[126.757,35.9565],"전주교육대학교":[127.1321,35.7895],"원광대학교":[127.0001,36.019],"우석대학교":[127.2338,35.9197],"전주대학교":[127.1116,35.7977],"예수대학교":[127.1245,35.7741],"호원대학교":[126.7365,35.9647],"한일장신대학교":[127.2133,35.9279],"군장대학교":[126.7494,35.9411],"원광보건대학교":[126.9796,36.0272],"전북과학대학교":[126.9062,35.5997],"전주기전대학":[127.1367,35.804],"전주비전대학교":[127.0975,35.7859],"백제예술대학교":[127.2262,35.9043],"전남대학교":[126.9317,35.1902],"조선대학교":[126.9546,35.1142],"광주교육대학교":[126.924,35.1933],"GIST 광주과학기술원":[126.9288,35.1845],"광주대학교":[126.8659,35.0924],"광주여자대학교":[126.7589,35.1627],"남부대학교":[126.7512,35.1658],"호남대학교":[126.756,35.157],"호남신학대학교":[126.8582,35.0955],"광신대학교":[126.9334,35.1957],"송원대학교":[126.863,35.0866],"광주보건대학교":[126.7606,35.1682],"기독간호대학교":[126.8676,35.0978],"동강대학교":[126.9187,35.1889],"서영대학교":[126.9372,35.1857],"조선간호대학교":[126.9469,35.1173],"조선이공대학교":[126.9517,35.1084],"목포대학교":[126.4332,34.9546],"순천대학교":[127.4,34.9917],"목포해양대학교":[126.4201,34.8079],"한국에너지공과대학교":[126.7314,34.986],"동신대학교":[126.7109,34.9942],"세한대학교":[126.6357,34.8],"초당대학교":[126.4127,34.9628],"목포가톨릭대학교":[126.3996,34.8161],"목포과학대학교":[126.4125,34.7925],"순천제일대학교":[127.3796,34.9999],"전남과학대학교":[127.2657,35.2145],"전남도립대학교":[126.9977,35.2887],"청암대학교":[127.3924,34.9763],"경북대학교":[128.5829,35.9245],"계명대학교":[128.5332,35.8242],"대구교육대학교":[128.5905,35.8333],"DGIST 대구경북과학기술원":[128.5112,35.729],"계명문화대학교":[128.5256,35.8272],"대구과학대학교":[128.5753,35.9276],"대구보건대학교":[128.5801,35.9187],"수성대학교":[128.6634,35.8308],"영남이공대학교":[128.5828,35.8364],"영진전문대학교":[128.5846,35.9299],"영남대학교":[128.8218,35.8295],"대구대학교":[128.8013,35.8377],"대구가톨릭대학교":[128.8142,35.8141],"대구한의대학교":[128.8264,35.844],"경일대학교":[128.7872,35.8259],"POSTECH 포항공과대학교":[129.4398,35.9545],"한동대학교":[129.2453,36.1627],"금오공과대학교":[128.3673,36.2048],"국립경국대학교":[128.791,36.5774],"경운대학교":[128.3468,36.213],"김천대학교":[128.0901,36.0582],"동양대학교":[128.6094,36.8674],"위덕대학교":[129.2473,35.8236],"대신대학교":[128.8365,35.8173],"동국대학교 WISE캠퍼스":[129.2268,35.8318],"경북전문대학교":[128.5889,36.8756],"구미대학교":[128.3597,36.1894],"대경대학교":[128.8045,35.8533],"가톨릭상지대학교":[128.7705,36.5856],"문경대학교":[128.1501,36.6875],"선린대학교":[129.2248,36.1709],"안동과학대학교":[128.7834,36.562],"포항대학교":[129.2377,36.1473],"호산대학교":[128.7973,35.806],"서라벌대학교":[129.2397,35.8082],"경북보건대학교":[128.0696,36.0664],"울산대학교":[129.3323,35.5137],"UNIST 울산과학기술원":[129.191,35.5431],"울산과학대학교":[129.427,35.5221],"춘해보건대학교":[129.1833,35.5462],"부산대학교":[129.0977,35.2556],"부경대학교":[129.0987,35.1227],"한국해양대학교":[129.0671,35.0765],"부산교육대학교":[129.0883,35.1796],"동아대학교":[128.9779,35.0838],"동의대학교":[129.049,35.1623],"경성대학교":[129.091,35.1258],"신라대학교":[128.9929,35.1543],"동서대학교":[128.9853,35.1574],"부산외국어대학교":[129.0901,35.2586],"고신대학교":[129.0594,35.0796],"부산가톨릭대학교":[129.0949,35.2498],"동명대학교":[129.0958,35.1169],"영산대학교":[129.1564,35.1912],"경남정보대학교":[128.9901,35.1485],"대동대학교":[129.0994,35.261],"동의과학대학교":[129.0413,35.1654],"동주대학교":[128.9702,35.0869],"부산경상대학교":[129.0806,35.1826],"부산과학기술대학교":[129.0263,35.2279],"부산여자대학교":[129.0462,35.1565],"부산보건대학교":[128.9751,35.0781],"경상국립대학교":[128.1416,35.2023],"창원대학교":[128.6609,35.3048],"진주교육대학교":[128.1211,35.2105],"경남대학교":[128.4916,35.1304],"인제대학교":[128.8571,35.2691],"가야대학교":[128.8366,35.2773],"창신대학교":[128.5507,35.2292],"해군사관학교":[128.7389,35.132],"거제대학교":[128.6268,34.8669],"김해대학교":[128.8495,35.2537],"마산대학교":[128.5302,35.2374],"연암공과대학교":[128.1339,35.1869],"창원문성대학교":[128.6404,35.313],"동원과학기술대학교":[129.0444,35.3975],"경남도립거창대학":[127.9147,35.7295],"경남도립남해대학":[127.9282,34.8078],"한국승강기대학교":[127.8942,35.7377],"제주대학교":[126.5409,33.4354],"제주국제대학교":[126.5204,33.4436],"제주관광대학교":[126.5333,33.4199],"제주한라대학교":[126.5455,33.4498]};
+const PROV=[{"c":"39","n":"제주특별자치도","p":[[[126.957,33.522],[126.973,33.499],[126.969,33.486],[126.95,33.49],[126.943,33.501],[126.957,33.522]],[[126.783,33.564],[126.802,33.554],[126.83,33.557],[126.833,33.543],[126.86,33.524],[126.874,33.528],[126.904,33.523],[126.918,33.498],[126.907,33.484],[126.915,33.47],[126.938,33.471],[126.942,33.459],[126.929,33.449],[126.91,33.403],[126.909,33.388],[126.893,33.384],[126.875,33.368],[126.871,33.35],[126.847,33.33],[126.851,33.322],[126.838,33.305],[126.811,33.298],[126.781,33.303],[126.747,33.275],[126.734,33.275],[126.694,33.266],[126.661,33.268],[126.644,33.262],[126.621,33.238],[126.6,33.233],[126.588,33.241],[126.55,33.234],[126.523,33.237],[126.511,33.227],[126.49,33.227],[126.472,33.219],[126.452,33.237],[126.433,33.229],[126.415,33.241],[126.387,33.228],[126.322,33.235],[126.3,33.219],[126.295,33.203],[126.274,33.191],[126.251,33.21],[126.234,33.231],[126.202,33.243],[126.184,33.256],[126.161,33.289],[126.168,33.296],[126.163,33.321],[126.169,33.343],[126.192,33.362],[126.215,33.373],[126.224,33.388],[126.238,33.393],[126.262,33.414],[126.262,33.431],[126.307,33.448],[126.31,33.463],[126.337,33.464],[126.388,33.487],[126.397,33.481],[126.482,33.507],[126.495,33.518],[126.517,33.513],[126.542,33.528],[126.551,33.518],[126.584,33.524],[126.599,33.535],[126.635,33.535],[126.646,33.553],[126.66,33.549],[126.72,33.553],[126.728,33.558],[126.758,33.556],[126.783,33.564]]]},{"c":"38","n":"경상남도","p":[[[128.239,34.648],[128.268,34.643],[128.279,34.616],[128.245,34.62],[128.226,34.633],[128.239,34.648]],[[128.486,34.813],[128.496,34.779],[128.511,34.764],[128.493,34.754],[128.474,34.758],[128.475,34.772],[128.462,34.785],[128.486,34.813]],[[128.239,34.837],[128.266,34.815],[128.249,34.797],[128.216,34.804],[128.202,34.82],[128.219,34.835],[128.239,34.837]],[[128.198,34.857],[128.213,34.849],[128.198,34.826],[128.184,34.824],[128.169,34.839],[128.173,34.851],[128.198,34.857]],[[128.036,34.916],[128.039,34.895],[128.069,34.867],[128.063,34.843],[128.066,34.827],[128.027,34.843],[128.025,34.836],[127.989,34.833],[127.971,34.84],[127.964,34.867],[127.98,34.877],[127.998,34.907],[128.009,34.916],[128.036,34.916]],[[127.898,34.943],[127.92,34.937],[127.932,34.911],[127.925,34.896],[127.901,34.869],[127.926,34.828],[127.945,34.823],[127.957,34.802],[127.992,34.83],[128.035,34.827],[128.063,34.819],[128.064,34.796],[128.053,34.792],[128.059,34.742],[128.028,34.716],[128.016,34.721],[127.988,34.708],[127.958,34.706],[127.948,34.73],[127.951,34.774],[127.931,34.773],[127.906,34.763],[127.915,34.733],[127.889,34.719],[127.869,34.723],[127.858,34.74],[127.838,34.747],[127.854,34.766],[127.837,34.8],[127.815,34.832],[127.809,34.854],[127.829,34.871],[127.833,34.894],[127.853,34.9],[127.857,34.923],[127.873,34.939],[127.898,34.943]],[[128.682,35.037],[128.697,35.027],[128.715,35.029],[128.724,35.015],[128.705,35.003],[128.698,34.976],[128.73,34.944],[128.721,34.933],[128.726,34.912],[128.719,34.897],[128.698,34.886],[128.717,34.872],[128.737,34.888],[128.746,34.865],[128.704,34.837],[128.743,34.789],[128.712,34.791],[128.711,34.809],[128.694,34.804],[128.676,34.81],[128.669,34.79],[128.677,34.783],[128.641,34.76],[128.655,34.74],[128.671,34.743],[128.686,34.735],[128.626,34.729],[128.635,34.716],[128.612,34.698],[128.582,34.713],[128.606,34.724],[128.608,34.732],[128.579,34.738],[128.566,34.763],[128.545,34.772],[128.54,34.785],[128.581,34.791],[128.587,34.799],[128.588,34.829],[128.58,34.851],[128.547,34.831],[128.519,34.805],[128.504,34.83],[128.484,34.837],[128.474,34.874],[128.499,34.902],[128.518,34.907],[128.529,34.921],[128.55,34.905],[128.585,34.911],[128.6,34.898],[128.614,34.898],[128.599,34.933],[128.588,34.943],[128.622,34.959],[128.649,34.96],[128.652,34.976],[128.624,34.983],[128.633,35.006],[128.649,35.015],[128.655,34.985],[128.67,35.003],[128.682,35.037]],[[128.373,35.608],[128.384,35.604],[128.434,35.62],[128.449,35.635],[128.487,35.632],[128.507,35.636],[128.511,35.672],[128.529,35.679],[128.54,35.648],[128.539,35.621],[128.561,35.612],[128.587,35.583],[128.609,35.577],[128.66,35.595],[128.694,35.591],[128.706,35.575],[128.727,35.578],[128.763,35.565],[128.789,35.563],[128.803,35.585],[128.836,35.594],[128.856,35.594],[128.875,35.618],[128.914,35.635],[128.94,35.632],[128.984,35.605],[129.006,35.617],[129.023,35.612],[129.028,35.598],[129.022,35.581],[128.998,35.566],[128.973,35.558],[128.997,35.526],[129.025,35.522],[129.109,35.492],[129.112,35.477],[129.142,35.446],[129.163,35.432],[129.18,35.429],[129.199,35.436],[129.222,35.406],[129.205,35.385],[129.196,35.358],[129.177,35.348],[129.151,35.361],[129.13,35.342],[129.114,35.306],[129.091,35.3],[129.076,35.287],[129.062,35.292],[129.052,35.277],[129.015,35.27],[129.0,35.231],[128.926,35.213],[128.886,35.211],[128.873,35.199],[128.884,35.179],[128.868,35.164],[128.846,35.155],[128.796,35.155],[128.804,35.139],[128.834,35.126],[128.844,35.104],[128.825,35.096],[128.804,35.086],[128.781,35.099],[128.735,35.089],[128.705,35.102],[128.691,35.147],[128.665,35.127],[128.637,35.146],[128.616,35.142],[128.596,35.169],[128.588,35.207],[128.567,35.181],[128.603,35.13],[128.605,35.101],[128.625,35.087],[128.639,35.065],[128.606,35.052],[128.58,35.048],[128.562,35.066],[128.564,35.08],[128.536,35.109],[128.521,35.094],[128.491,35.104],[128.47,35.094],[128.464,35.068],[128.443,35.069],[128.43,35.052],[128.414,35.059],[128.383,35.046],[128.391,35.032],[128.447,35.048],[128.45,35.067],[128.485,35.061],[128.474,35.038],[128.505,35.011],[128.481,34.989],[128.465,34.984],[128.441,34.991],[128.442,34.959],[128.434,34.954],[128.436,34.929],[128.423,34.892],[128.434,34.874],[128.453,34.912],[128.471,34.884],[128.458,34.874],[128.454,34.843],[128.425,34.83],[128.444,34.824],[128.444,34.8],[128.438,34.776],[128.428,34.762],[128.409,34.759],[128.392,34.787],[128.379,34.792],[128.381,34.812],[128.341,34.825],[128.361,34.837],[128.378,34.823],[128.38,34.849],[128.396,34.861],[128.377,34.878],[128.366,34.867],[128.324,34.881],[128.301,34.899],[128.31,34.906],[128.358,34.906],[128.349,34.93],[128.336,34.941],[128.302,34.933],[128.303,34.909],[128.285,34.901],[128.268,34.91],[128.272,34.931],[128.243,34.941],[128.198,34.934],[128.206,34.921],[128.199,34.909],[128.205,34.891],[128.179,34.892],[128.124,34.901],[128.079,34.92],[128.057,34.925],[128.032,34.953],[128.054,34.975],[128.041,34.998],[128.052,35.013],[128.028,35.03],[128.01,35.021],[128.019,35.005],[128.018,34.989],[127.991,34.986],[127.985,34.975],[127.963,34.985],[127.95,34.974],[127.934,34.99],[127.93,35.01],[127.905,34.967],[127.906,34.955],[127.877,34.944],[127.839,34.947],[127.787,34.937],[127.767,34.97],[127.78,34.985],[127.789,35.014],[127.774,35.026],[127.771,35.047],[127.742,35.059],[127.74,35.075],[127.721,35.079],[127.697,35.1],[127.697,35.127],[127.624,35.185],[127.621,35.234],[127.612,35.259],[127.598,35.265],[127.58,35.306],[127.594,35.308],[127.623,35.329],[127.625,35.341],[127.612,35.363],[127.642,35.402],[127.664,35.414],[127.669,35.445],[127.647,35.447],[127.638,35.459],[127.639,35.475],[127.655,35.483],[127.628,35.522],[127.626,35.531],[127.593,35.551],[127.59,35.562],[127.613,35.582],[127.615,35.604],[127.63,35.615],[127.622,35.639],[127.63,35.66],[127.641,35.667],[127.647,35.695],[127.663,35.707],[127.664,35.756],[127.703,35.786],[127.722,35.794],[127.748,35.84],[127.774,35.836],[127.79,35.849],[127.811,35.851],[127.833,35.867],[127.843,35.864],[127.854,35.887],[127.89,35.912],[127.887,35.89],[127.895,35.884],[127.918,35.889],[127.933,35.875],[127.935,35.853],[127.953,35.858],[127.973,35.848],[127.988,35.854],[128.0,35.835],[128.014,35.826],[128.034,35.833],[128.053,35.826],[128.073,35.838],[128.126,35.819],[128.124,35.801],[128.131,35.786],[128.155,35.783],[128.166,35.76],[128.189,35.751],[128.204,35.72],[128.204,35.681],[128.182,35.671],[128.166,35.67],[128.166,35.65],[128.187,35.655],[128.203,35.641],[128.238,35.638],[128.246,35.653],[128.263,35.64],[128.281,35.649],[128.308,35.652],[128.357,35.639],[128.373,35.608]]]},{"c":"37","n":"경상북도","p":[[[129.452,35.648],[129.415,35.661],[129.356,35.677],[129.305,35.645],[129.263,35.651],[129.257,35.663],[129.265,35.688],[129.256,35.698],[129.236,35.701],[129.21,35.718],[129.163,35.712],[129.148,35.722],[129.138,35.709],[129.091,35.699],[129.072,35.678],[129.07,35.656],[129.076,35.637],[129.05,35.647],[129.006,35.617],[128.984,35.605],[128.94,35.632],[128.914,35.635],[128.875,35.618],[128.856,35.594],[128.836,35.594],[128.803,35.585],[128.789,35.563],[128.763,35.565],[128.727,35.578],[128.706,35.575],[128.694,35.591],[128.66,35.595],[128.609,35.577],[128.587,35.583],[128.561,35.612],[128.539,35.621],[128.54,35.648],[128.529,35.679],[128.546,35.716],[128.582,35.736],[128.619,35.734],[128.612,35.722],[128.625,35.7],[128.64,35.703],[128.666,35.717],[128.686,35.719],[128.694,35.729],[128.698,35.755],[128.685,35.787],[128.719,35.803],[128.711,35.824],[128.754,35.854],[128.765,35.881],[128.759,35.912],[128.741,35.925],[128.747,35.941],[128.741,35.953],[128.748,35.968],[128.734,35.982],[128.728,36.002],[128.693,36.012],[128.62,36.003],[128.592,35.976],[128.558,35.968],[128.529,35.973],[128.537,35.937],[128.526,35.915],[128.495,35.893],[128.478,35.892],[128.47,35.904],[128.478,35.933],[128.443,35.932],[128.42,35.918],[128.406,35.886],[128.388,35.862],[128.392,35.847],[128.425,35.848],[128.462,35.838],[128.48,35.824],[128.471,35.805],[128.422,35.806],[128.41,35.794],[128.389,35.76],[128.395,35.743],[128.435,35.722],[128.435,35.7],[128.42,35.69],[128.362,35.704],[128.353,35.7],[128.358,35.678],[128.384,35.652],[128.405,35.639],[128.388,35.609],[128.373,35.608],[128.357,35.639],[128.308,35.652],[128.281,35.649],[128.263,35.64],[128.246,35.653],[128.238,35.638],[128.203,35.641],[128.187,35.655],[128.166,35.65],[128.166,35.67],[128.182,35.671],[128.204,35.681],[128.204,35.72],[128.189,35.751],[128.166,35.76],[128.155,35.783],[128.131,35.786],[128.124,35.801],[128.126,35.819],[128.073,35.838],[128.053,35.826],[128.034,35.833],[128.014,35.826],[128.0,35.835],[127.988,35.854],[127.973,35.848],[127.953,35.858],[127.935,35.853],[127.933,35.875],[127.918,35.889],[127.895,35.884],[127.887,35.89],[127.89,35.912],[127.884,35.925],[127.911,35.938],[127.897,35.982],[127.878,35.994],[127.879,36.019],[127.906,36.036],[127.919,36.051],[127.938,36.048],[127.964,36.065],[127.96,36.092],[127.969,36.115],[127.989,36.126],[127.998,36.15],[127.978,36.185],[127.988,36.197],[128.016,36.206],[128.041,36.191],[128.055,36.198],[128.053,36.212],[128.032,36.237],[128.049,36.254],[128.012,36.269],[127.984,36.261],[127.97,36.248],[127.951,36.254],[127.933,36.275],[127.894,36.289],[127.882,36.272],[127.853,36.273],[127.843,36.307],[127.854,36.327],[127.884,36.342],[127.893,36.354],[127.875,36.403],[127.885,36.419],[127.875,36.434],[127.885,36.458],[127.883,36.478],[127.909,36.505],[127.903,36.522],[127.876,36.535],[127.876,36.552],[127.864,36.565],[127.826,36.568],[127.8,36.588],[127.826,36.61],[127.852,36.61],[127.85,36.63],[127.865,36.632],[127.876,36.652],[127.892,36.627],[127.934,36.615],[127.941,36.648],[127.934,36.662],[127.89,36.688],[127.934,36.69],[127.934,36.703],[127.951,36.715],[127.963,36.734],[127.989,36.715],[128.005,36.714],[128.024,36.723],[128.05,36.705],[128.074,36.704],[128.071,36.719],[128.035,36.745],[128.057,36.79],[128.061,36.813],[128.086,36.801],[128.109,36.803],[128.114,36.816],[128.142,36.831],[128.167,36.817],[128.221,36.812],[128.216,36.846],[128.236,36.845],[128.244,36.87],[128.285,36.854],[128.299,36.832],[128.323,36.812],[128.336,36.814],[128.369,36.798],[128.384,36.811],[128.423,36.809],[128.451,36.846],[128.45,36.862],[128.427,36.874],[128.443,36.899],[128.444,36.925],[128.462,36.932],[128.465,36.945],[128.516,36.974],[128.517,36.984],[128.547,36.99],[128.574,37.013],[128.567,37.029],[128.586,37.041],[128.633,37.036],[128.654,37.063],[128.691,37.05],[128.702,37.038],[128.737,37.037],[128.754,37.026],[128.764,37.032],[128.754,37.055],[128.767,37.061],[128.787,37.085],[128.811,37.075],[128.829,37.075],[128.849,37.049],[128.878,37.042],[128.898,37.042],[128.925,37.089],[128.947,37.092],[128.963,37.075],[128.985,37.081],[129.067,37.065],[129.079,37.09],[129.098,37.098],[129.143,37.079],[129.197,37.038],[129.235,37.042],[129.228,37.071],[129.252,37.093],[129.268,37.099],[129.274,37.114],[129.297,37.112],[129.306,37.126],[129.342,37.142],[129.366,37.144],[129.384,37.117],[129.382,37.097],[129.407,37.075],[129.43,37.061],[129.417,37.05],[129.413,37.021],[129.421,37.003],[129.411,36.977],[129.422,36.948],[129.424,36.894],[129.418,36.886],[129.432,36.845],[129.46,36.812],[129.466,36.785],[129.481,36.765],[129.47,36.755],[129.48,36.73],[129.475,36.721],[129.479,36.696],[129.467,36.683],[129.44,36.667],[129.415,36.62],[129.413,36.592],[129.425,36.566],[129.443,36.549],[129.449,36.5],[129.437,36.48],[129.44,36.46],[129.439,36.426],[129.427,36.403],[129.398,36.363],[129.382,36.33],[129.385,36.32],[129.377,36.286],[129.384,36.272],[129.375,36.252],[129.387,36.237],[129.387,36.209],[129.375,36.204],[129.379,36.187],[129.395,36.177],[129.402,36.162],[129.4,36.132],[129.443,36.097],[129.421,36.086],[129.423,36.074],[129.383,36.057],[129.379,36.047],[129.386,36.027],[129.419,36.009],[129.432,35.994],[129.454,35.989],[129.476,36.01],[129.505,36.023],[129.506,36.034],[129.536,36.055],[129.549,36.082],[129.572,36.074],[129.586,36.017],[129.581,36.005],[129.559,35.988],[129.557,35.965],[129.536,35.933],[129.521,35.924],[129.53,35.902],[129.522,35.87],[129.53,35.861],[129.512,35.821],[129.517,35.813],[129.494,35.784],[129.499,35.768],[129.489,35.726],[129.475,35.7],[129.478,35.683],[129.452,35.648]],[[130.908,37.546],[130.911,37.526],[130.921,37.511],[130.916,37.479],[130.866,37.457],[130.834,37.463],[130.803,37.481],[130.806,37.5],[130.794,37.51],[130.848,37.533],[130.895,37.538],[130.908,37.546]]]},{"c":"36","n":"전라남도","p":[[[125.097,34.094],[125.113,34.092],[125.123,34.074],[125.148,34.049],[125.137,34.043],[125.118,34.048],[125.114,34.06],[125.096,34.066],[125.097,34.094]],[[126.551,34.176],[126.565,34.167],[126.586,34.167],[126.579,34.141],[126.55,34.123],[126.527,34.118],[126.507,34.134],[126.517,34.167],[126.542,34.179],[126.551,34.176]],[[126.663,34.192],[126.684,34.182],[126.671,34.16],[126.683,34.136],[126.665,34.108],[126.636,34.125],[126.629,34.142],[126.65,34.165],[126.636,34.176],[126.652,34.197],[126.663,34.192]],[[126.894,34.213],[126.927,34.171],[126.918,34.151],[126.886,34.148],[126.849,34.171],[126.874,34.207],[126.894,34.213]],[[126.57,34.231],[126.598,34.224],[126.617,34.213],[126.627,34.2],[126.612,34.193],[126.619,34.177],[126.589,34.169],[126.562,34.176],[126.55,34.186],[126.567,34.216],[126.57,34.231]],[[127.259,34.248],[127.265,34.224],[127.259,34.208],[127.229,34.214],[127.235,34.233],[127.259,34.248]],[[126.042,34.316],[126.057,34.301],[126.082,34.305],[126.097,34.274],[126.076,34.279],[126.056,34.271],[126.05,34.28],[126.03,34.28],[126.023,34.3],[126.042,34.316]],[[126.988,34.337],[127.017,34.329],[127.005,34.311],[126.974,34.298],[126.959,34.31],[126.959,34.326],[126.988,34.337]],[[126.842,34.35],[126.85,34.342],[126.871,34.347],[126.882,34.334],[126.9,34.329],[126.886,34.307],[126.869,34.312],[126.847,34.295],[126.834,34.32],[126.811,34.323],[126.801,34.315],[126.782,34.324],[126.79,34.344],[126.805,34.33],[126.821,34.345],[126.842,34.35]],[[127.037,34.373],[127.056,34.358],[127.093,34.355],[127.099,34.332],[127.085,34.333],[127.052,34.326],[127.009,34.355],[127.013,34.373],[127.037,34.373]],[[126.687,34.399],[126.703,34.395],[126.734,34.373],[126.731,34.359],[126.751,34.318],[126.773,34.31],[126.762,34.289],[126.734,34.284],[126.72,34.294],[126.696,34.289],[126.679,34.311],[126.651,34.33],[126.641,34.379],[126.65,34.39],[126.687,34.399]],[[126.947,34.409],[126.953,34.399],[126.936,34.367],[126.92,34.353],[126.866,34.37],[126.874,34.392],[126.887,34.401],[126.906,34.399],[126.933,34.387],[126.947,34.409]],[[127.248,34.411],[127.263,34.4],[127.274,34.377],[127.252,34.383],[127.255,34.4],[127.248,34.411]],[[126.837,34.439],[126.848,34.426],[126.868,34.387],[126.838,34.38],[126.793,34.377],[126.775,34.351],[126.767,34.357],[126.777,34.378],[126.757,34.383],[126.766,34.403],[126.79,34.43],[126.803,34.429],[126.837,34.439]],[[127.05,34.454],[127.068,34.448],[127.077,34.426],[127.069,34.401],[127.038,34.421],[127.034,34.446],[127.05,34.454]],[[127.808,34.458],[127.813,34.443],[127.81,34.413],[127.788,34.415],[127.8,34.449],[127.808,34.458]],[[127.466,34.469],[127.504,34.459],[127.509,34.465],[127.539,34.445],[127.537,34.426],[127.495,34.409],[127.493,34.43],[127.467,34.437],[127.457,34.452],[127.466,34.469]],[[127.225,34.49],[127.237,34.472],[127.215,34.429],[127.191,34.427],[127.17,34.432],[127.147,34.426],[127.127,34.428],[127.1,34.463],[127.127,34.486],[127.139,34.47],[127.159,34.476],[127.19,34.491],[127.201,34.485],[127.225,34.49]],[[127.461,34.543],[127.481,34.533],[127.464,34.507],[127.493,34.505],[127.504,34.492],[127.484,34.48],[127.454,34.476],[127.446,34.494],[127.461,34.5],[127.449,34.514],[127.436,34.516],[127.461,34.543]],[[127.743,34.55],[127.759,34.549],[127.764,34.532],[127.783,34.516],[127.799,34.49],[127.774,34.484],[127.769,34.493],[127.728,34.513],[127.716,34.536],[127.743,34.55]],[[126.253,34.586],[126.306,34.568],[126.309,34.549],[126.34,34.543],[126.384,34.502],[126.374,34.463],[126.36,34.453],[126.368,34.44],[126.339,34.413],[126.317,34.402],[126.295,34.406],[126.287,34.391],[126.267,34.394],[126.265,34.376],[126.246,34.375],[126.203,34.355],[126.175,34.35],[126.137,34.357],[126.136,34.371],[126.116,34.378],[126.111,34.392],[126.091,34.415],[126.104,34.438],[126.147,34.473],[126.175,34.482],[126.18,34.499],[126.2,34.505],[126.227,34.532],[126.257,34.534],[126.263,34.545],[126.243,34.566],[126.253,34.586]],[[125.858,34.627],[125.863,34.601],[125.844,34.594],[125.829,34.597],[125.823,34.612],[125.858,34.627]],[[126.07,34.632],[126.085,34.611],[126.105,34.603],[126.113,34.586],[126.098,34.571],[126.104,34.552],[126.088,34.551],[126.082,34.538],[126.05,34.526],[126.048,34.562],[126.067,34.558],[126.082,34.575],[126.065,34.606],[126.05,34.605],[126.051,34.626],[126.07,34.632]],[[126.051,34.656],[126.053,34.638],[126.039,34.612],[126.059,34.6],[126.067,34.581],[126.057,34.564],[126.021,34.561],[126.013,34.602],[126.012,34.628],[126.03,34.633],[126.03,34.644],[126.051,34.656]],[[126.149,34.671],[126.186,34.659],[126.193,34.629],[126.164,34.613],[126.13,34.617],[126.11,34.643],[126.119,34.661],[126.149,34.671]],[[126.086,34.681],[126.089,34.666],[126.081,34.64],[126.066,34.652],[126.067,34.682],[126.086,34.681]],[[126.198,34.703],[126.199,34.68],[126.183,34.67],[126.163,34.677],[126.162,34.69],[126.198,34.703]],[[125.444,34.697],[125.467,34.69],[125.45,34.677],[125.447,34.66],[125.429,34.656],[125.432,34.641],[125.417,34.635],[125.416,34.619],[125.395,34.625],[125.387,34.64],[125.4,34.674],[125.415,34.695],[125.444,34.697]],[[125.214,34.708],[125.215,34.692],[125.205,34.677],[125.178,34.669],[125.203,34.702],[125.214,34.708]],[[127.751,34.731],[127.788,34.714],[127.793,34.699],[127.779,34.678],[127.797,34.658],[127.803,34.627],[127.794,34.608],[127.808,34.587],[127.788,34.582],[127.752,34.589],[127.712,34.62],[127.727,34.634],[127.726,34.653],[127.75,34.667],[127.76,34.686],[127.76,34.709],[127.751,34.731]],[[125.971,34.727],[125.978,34.718],[126.017,34.707],[126.01,34.681],[125.99,34.675],[125.983,34.661],[125.968,34.653],[125.918,34.674],[125.917,34.707],[125.944,34.711],[125.963,34.734],[125.971,34.727]],[[126.083,34.776],[126.099,34.768],[126.126,34.773],[126.14,34.755],[126.165,34.755],[126.196,34.729],[126.198,34.716],[126.175,34.697],[126.147,34.683],[126.122,34.68],[126.111,34.693],[126.076,34.705],[126.07,34.714],[126.075,34.744],[126.082,34.75],[126.07,34.769],[126.083,34.776]],[[125.999,34.802],[126.001,34.757],[125.979,34.749],[125.944,34.75],[125.953,34.731],[125.944,34.718],[125.921,34.711],[125.896,34.723],[125.891,34.762],[125.911,34.773],[125.938,34.773],[125.969,34.788],[125.976,34.8],[125.999,34.802]],[[126.172,34.8],[126.177,34.759],[126.138,34.759],[126.125,34.776],[126.102,34.775],[126.102,34.789],[126.135,34.797],[126.158,34.82],[126.172,34.8]],[[126.117,34.88],[126.14,34.872],[126.153,34.842],[126.116,34.823],[126.122,34.8],[126.103,34.794],[126.095,34.808],[126.06,34.846],[126.084,34.856],[126.105,34.848],[126.117,34.88]],[[127.72,34.896],[127.748,34.888],[127.749,34.87],[127.72,34.865],[127.694,34.882],[127.72,34.896]],[[126.298,34.919],[126.313,34.906],[126.338,34.906],[126.345,34.891],[126.327,34.887],[126.327,34.858],[126.359,34.861],[126.374,34.844],[126.36,34.812],[126.334,34.816],[126.341,34.835],[126.336,34.845],[126.279,34.853],[126.257,34.837],[126.23,34.847],[126.244,34.856],[126.266,34.856],[126.284,34.864],[126.304,34.89],[126.283,34.907],[126.298,34.919]],[[126.065,34.933],[126.094,34.92],[126.106,34.898],[126.098,34.872],[126.087,34.861],[126.052,34.85],[125.999,34.862],[125.991,34.874],[126.016,34.91],[126.033,34.906],[126.042,34.916],[126.06,34.917],[126.065,34.933]],[[127.739,34.944],[127.741,34.929],[127.767,34.929],[127.787,34.912],[127.787,34.883],[127.763,34.89],[127.761,34.903],[127.706,34.909],[127.727,34.945],[127.739,34.944]],[[126.217,34.983],[126.233,34.977],[126.215,34.933],[126.197,34.912],[126.19,34.943],[126.203,34.975],[126.217,34.983]],[[126.136,35.024],[126.156,35.023],[126.174,35.012],[126.19,34.983],[126.177,34.943],[126.16,34.935],[126.125,34.948],[126.137,34.964],[126.135,34.998],[126.118,34.992],[126.1,34.998],[126.117,35.016],[126.136,35.024]],[[126.149,35.055],[126.171,35.053],[126.203,35.035],[126.198,35.022],[126.151,35.031],[126.135,35.048],[126.149,35.055]],[[126.164,35.141],[126.147,35.134],[126.13,35.113],[126.123,35.094],[126.121,35.058],[126.093,35.049],[126.075,35.057],[126.05,35.058],[126.043,35.082],[126.05,35.099],[126.087,35.109],[126.12,35.14],[126.164,35.141]],[[127.58,35.306],[127.598,35.265],[127.612,35.259],[127.621,35.234],[127.624,35.185],[127.697,35.127],[127.697,35.1],[127.721,35.079],[127.74,35.075],[127.742,35.059],[127.771,35.047],[127.774,35.026],[127.789,35.014],[127.78,34.985],[127.767,34.975],[127.763,34.963],[127.73,34.95],[127.702,34.928],[127.693,34.912],[127.642,34.883],[127.62,34.913],[127.593,34.916],[127.616,34.889],[127.592,34.872],[127.613,34.846],[127.645,34.827],[127.664,34.841],[127.672,34.834],[127.701,34.856],[127.736,34.852],[127.764,34.862],[127.777,34.857],[127.772,34.809],[127.758,34.782],[127.747,34.773],[127.757,34.76],[127.752,34.733],[127.706,34.717],[127.684,34.738],[127.66,34.752],[127.642,34.712],[127.626,34.698],[127.626,34.684],[127.642,34.643],[127.623,34.636],[127.592,34.649],[127.572,34.64],[127.554,34.659],[127.553,34.686],[127.569,34.725],[127.581,34.73],[127.592,34.755],[127.582,34.759],[127.559,34.804],[127.526,34.807],[127.54,34.829],[127.525,34.847],[127.517,34.875],[127.504,34.871],[127.475,34.842],[127.403,34.822],[127.422,34.808],[127.397,34.793],[127.389,34.776],[127.403,34.764],[127.399,34.754],[127.375,34.738],[127.393,34.708],[127.454,34.692],[127.452,34.668],[127.48,34.669],[127.476,34.652],[127.489,34.649],[127.508,34.589],[127.489,34.575],[127.459,34.58],[127.447,34.573],[127.414,34.587],[127.396,34.578],[127.41,34.558],[127.436,34.549],[127.425,34.528],[127.403,34.501],[127.381,34.499],[127.379,34.483],[127.332,34.47],[127.341,34.442],[127.324,34.438],[127.289,34.474],[127.27,34.479],[127.285,34.494],[127.259,34.516],[127.212,34.517],[127.196,34.529],[127.171,34.519],[127.138,34.52],[127.125,34.526],[127.114,34.544],[127.115,34.556],[127.146,34.581],[127.174,34.592],[127.175,34.624],[127.202,34.645],[127.21,34.626],[127.23,34.64],[127.235,34.677],[127.253,34.707],[127.281,34.716],[127.288,34.695],[127.282,34.67],[127.317,34.662],[127.32,34.679],[127.336,34.705],[127.326,34.749],[127.306,34.746],[127.295,34.728],[127.273,34.738],[127.264,34.729],[127.241,34.764],[127.211,34.734],[127.2,34.703],[127.183,34.689],[127.143,34.691],[127.13,34.699],[127.109,34.674],[127.071,34.66],[127.056,34.639],[126.997,34.611],[127.011,34.602],[126.995,34.591],[126.985,34.567],[126.99,34.537],[126.974,34.54],[126.961,34.528],[126.975,34.513],[126.964,34.499],[126.979,34.484],[126.956,34.467],[126.939,34.445],[126.928,34.45],[126.879,34.454],[126.889,34.425],[126.852,34.444],[126.822,34.446],[126.792,34.463],[126.794,34.485],[126.789,34.51],[126.793,34.529],[126.795,34.567],[126.774,34.6],[126.768,34.56],[126.771,34.552],[126.761,34.523],[126.76,34.491],[126.743,34.485],[126.75,34.469],[126.73,34.442],[126.7,34.437],[126.683,34.423],[126.654,34.418],[126.62,34.399],[126.623,34.355],[126.605,34.344],[126.606,34.321],[126.588,34.317],[126.56,34.318],[126.547,34.3],[126.519,34.295],[126.514,34.316],[126.529,34.331],[126.522,34.358],[126.483,34.355],[126.483,34.378],[126.497,34.386],[126.492,34.4],[126.519,34.411],[126.51,34.424],[126.491,34.432],[126.479,34.423],[126.46,34.446],[126.469,34.459],[126.458,34.474],[126.473,34.504],[126.462,34.529],[126.434,34.541],[126.432,34.552],[126.404,34.541],[126.382,34.56],[126.365,34.558],[126.336,34.57],[126.316,34.563],[126.308,34.587],[126.281,34.593],[126.287,34.627],[126.272,34.63],[126.265,34.657],[126.257,34.661],[126.26,34.691],[126.276,34.709],[126.276,34.726],[126.288,34.755],[126.302,34.759],[126.337,34.735],[126.353,34.7],[126.342,34.692],[126.344,34.671],[126.371,34.637],[126.379,34.615],[126.437,34.587],[126.43,34.611],[126.376,34.641],[126.36,34.673],[126.346,34.683],[126.37,34.696],[126.391,34.728],[126.369,34.735],[126.382,34.75],[126.381,34.764],[126.451,34.78],[126.443,34.796],[126.403,34.78],[126.371,34.778],[126.364,34.788],[126.372,34.81],[126.39,34.834],[126.409,34.849],[126.397,34.866],[126.404,34.877],[126.391,34.887],[126.407,34.908],[126.394,34.917],[126.389,34.944],[126.396,34.959],[126.381,34.968],[126.369,34.925],[126.345,34.912],[126.332,34.917],[126.323,34.94],[126.297,34.962],[126.308,34.983],[126.335,34.968],[126.361,34.984],[126.346,34.999],[126.391,35.022],[126.383,35.044],[126.354,35.036],[126.346,35.067],[126.33,35.085],[126.303,35.045],[126.293,35.056],[126.262,35.05],[126.276,35.035],[126.258,35.01],[126.229,35.02],[126.237,35.041],[126.225,35.055],[126.188,35.055],[126.163,35.064],[126.169,35.101],[126.193,35.11],[126.235,35.095],[126.247,35.107],[126.259,35.139],[126.274,35.143],[126.327,35.131],[126.347,35.148],[126.346,35.112],[126.337,35.089],[126.37,35.068],[126.399,35.074],[126.409,35.061],[126.401,35.03],[126.443,35.053],[126.454,35.07],[126.442,35.081],[126.462,35.089],[126.448,35.103],[126.422,35.104],[126.405,35.132],[126.365,35.164],[126.342,35.19],[126.309,35.175],[126.3,35.224],[126.313,35.252],[126.326,35.25],[126.325,35.285],[126.36,35.286],[126.38,35.303],[126.38,35.326],[126.4,35.366],[126.408,35.406],[126.424,35.425],[126.45,35.427],[126.481,35.421],[126.491,35.408],[126.484,35.383],[126.522,35.347],[126.52,35.323],[126.533,35.304],[126.553,35.31],[126.594,35.302],[126.583,35.321],[126.606,35.332],[126.627,35.318],[126.647,35.317],[126.669,35.348],[126.701,35.347],[126.707,35.362],[126.721,35.362],[126.733,35.373],[126.732,35.392],[126.754,35.42],[126.75,35.447],[126.766,35.463],[126.815,35.466],[126.828,35.483],[126.853,35.463],[126.871,35.458],[126.907,35.438],[126.9,35.43],[126.911,35.414],[126.932,35.403],[126.935,35.392],[126.965,35.392],[126.979,35.4],[126.972,35.424],[127.015,35.455],[127.037,35.462],[127.04,35.433],[127.051,35.428],[127.044,35.396],[127.033,35.387],[127.049,35.374],[127.059,35.381],[127.072,35.363],[127.067,35.333],[127.054,35.337],[127.049,35.315],[127.064,35.314],[127.118,35.297],[127.149,35.312],[127.171,35.329],[127.203,35.313],[127.217,35.313],[127.225,35.334],[127.263,35.309],[127.29,35.311],[127.308,35.3],[127.358,35.318],[127.387,35.3],[127.433,35.356],[127.474,35.364],[127.504,35.356],[127.533,35.334],[127.58,35.306]]]},{"c":"35","n":"전라북도","p":[[[126.306,35.619],[126.316,35.611],[126.307,35.594],[126.291,35.589],[126.265,35.568],[126.25,35.584],[126.272,35.587],[126.278,35.601],[126.293,35.602],[126.306,35.619]],[[127.64,36.065],[127.657,36.053],[127.662,36.036],[127.687,36.059],[127.699,36.053],[127.708,36.03],[127.733,36.029],[127.79,36.011],[127.803,36.024],[127.856,36.036],[127.879,36.019],[127.878,35.994],[127.897,35.982],[127.911,35.938],[127.884,35.925],[127.89,35.912],[127.854,35.887],[127.843,35.864],[127.833,35.867],[127.811,35.851],[127.79,35.849],[127.774,35.836],[127.748,35.84],[127.722,35.794],[127.703,35.786],[127.664,35.756],[127.663,35.707],[127.647,35.695],[127.641,35.667],[127.63,35.66],[127.622,35.639],[127.63,35.615],[127.615,35.604],[127.613,35.582],[127.59,35.562],[127.593,35.551],[127.626,35.531],[127.628,35.522],[127.655,35.483],[127.639,35.475],[127.638,35.459],[127.647,35.447],[127.669,35.445],[127.664,35.414],[127.642,35.402],[127.612,35.363],[127.625,35.341],[127.623,35.329],[127.594,35.308],[127.58,35.306],[127.533,35.334],[127.504,35.356],[127.474,35.364],[127.433,35.356],[127.387,35.3],[127.358,35.318],[127.308,35.3],[127.29,35.311],[127.263,35.309],[127.225,35.334],[127.217,35.313],[127.203,35.313],[127.171,35.329],[127.149,35.312],[127.118,35.297],[127.064,35.314],[127.049,35.315],[127.054,35.337],[127.067,35.333],[127.072,35.363],[127.059,35.381],[127.049,35.374],[127.033,35.387],[127.044,35.396],[127.051,35.428],[127.04,35.433],[127.037,35.462],[127.015,35.455],[126.972,35.424],[126.979,35.4],[126.965,35.392],[126.935,35.392],[126.932,35.403],[126.911,35.414],[126.9,35.43],[126.907,35.438],[126.871,35.458],[126.853,35.463],[126.828,35.483],[126.815,35.466],[126.766,35.463],[126.75,35.447],[126.754,35.42],[126.732,35.392],[126.733,35.373],[126.721,35.362],[126.707,35.362],[126.701,35.347],[126.669,35.348],[126.647,35.317],[126.627,35.318],[126.606,35.332],[126.583,35.321],[126.594,35.302],[126.553,35.31],[126.533,35.304],[126.52,35.323],[126.522,35.347],[126.484,35.383],[126.491,35.408],[126.481,35.421],[126.45,35.427],[126.431,35.435],[126.444,35.451],[126.485,35.516],[126.521,35.531],[126.544,35.524],[126.564,35.538],[126.605,35.54],[126.618,35.554],[126.619,35.567],[126.65,35.567],[126.667,35.552],[126.674,35.578],[126.638,35.59],[126.619,35.582],[126.577,35.587],[126.543,35.585],[126.53,35.576],[126.494,35.583],[126.47,35.601],[126.467,35.631],[126.486,35.653],[126.502,35.654],[126.535,35.684],[126.563,35.696],[126.573,35.692],[126.604,35.717],[126.629,35.745],[126.625,35.786],[126.645,35.795],[126.701,35.796],[126.73,35.791],[126.772,35.775],[126.779,35.798],[126.735,35.816],[126.701,35.837],[126.694,35.849],[126.733,35.864],[126.79,35.862],[126.801,35.871],[126.803,35.891],[126.786,35.899],[126.772,35.886],[126.738,35.889],[126.727,35.883],[126.701,35.891],[126.678,35.892],[126.67,35.88],[126.617,35.883],[126.612,35.914],[126.617,35.94],[126.597,35.945],[126.53,35.937],[126.523,35.968],[126.571,35.973],[126.645,35.976],[126.669,35.981],[126.682,35.996],[126.727,35.992],[126.737,35.998],[126.751,36.021],[126.777,36.029],[126.812,36.031],[126.832,36.044],[126.866,36.058],[126.877,36.089],[126.875,36.11],[126.894,36.138],[126.925,36.136],[126.959,36.153],[126.992,36.142],[127.006,36.146],[127.026,36.134],[127.052,36.139],[127.063,36.091],[127.084,36.075],[127.136,36.067],[127.139,36.084],[127.171,36.081],[127.181,36.091],[127.202,36.083],[127.207,36.097],[127.248,36.092],[127.254,36.11],[127.275,36.105],[127.297,36.11],[127.308,36.123],[127.341,36.128],[127.357,36.105],[127.362,36.087],[127.363,36.05],[127.377,36.031],[127.403,36.005],[127.428,36.023],[127.447,36.004],[127.458,35.981],[127.47,35.985],[127.49,35.975],[127.508,35.977],[127.536,35.989],[127.542,36.009],[127.54,36.03],[127.594,36.022],[127.603,36.009],[127.62,36.005],[127.633,36.038],[127.621,36.039],[127.626,36.064],[127.64,36.065]]]},{"c":"34","n":"충청남도","p":[[[126.363,36.61],[126.387,36.603],[126.401,36.579],[126.393,36.548],[126.399,36.516],[126.429,36.459],[126.437,36.416],[126.421,36.402],[126.408,36.411],[126.383,36.415],[126.373,36.407],[126.34,36.436],[126.328,36.465],[126.336,36.488],[126.323,36.555],[126.312,36.566],[126.312,36.582],[126.342,36.606],[126.363,36.61]],[[126.911,36.902],[126.998,36.933],[127.034,36.925],[127.063,36.937],[127.076,36.936],[127.116,36.97],[127.132,36.962],[127.146,36.969],[127.192,36.95],[127.204,36.949],[127.222,36.927],[127.246,36.915],[127.272,36.91],[127.292,36.891],[127.31,36.882],[127.308,36.86],[127.338,36.852],[127.336,36.828],[127.358,36.826],[127.384,36.811],[127.404,36.792],[127.397,36.781],[127.414,36.769],[127.414,36.754],[127.399,36.744],[127.39,36.756],[127.339,36.75],[127.343,36.729],[127.327,36.73],[127.31,36.718],[127.31,36.702],[127.288,36.688],[127.25,36.692],[127.206,36.722],[127.165,36.731],[127.136,36.704],[127.145,36.689],[127.163,36.689],[127.167,36.675],[127.157,36.662],[127.16,36.633],[127.158,36.603],[127.184,36.593],[127.195,36.578],[127.196,36.562],[127.175,36.533],[127.184,36.519],[127.173,36.509],[127.207,36.456],[127.203,36.439],[127.228,36.419],[127.26,36.405],[127.284,36.412],[127.283,36.372],[127.273,36.358],[127.28,36.346],[127.262,36.324],[127.261,36.293],[127.252,36.28],[127.283,36.262],[127.285,36.233],[127.317,36.218],[127.326,36.2],[127.343,36.186],[127.355,36.209],[127.367,36.217],[127.362,36.261],[127.375,36.269],[127.392,36.262],[127.389,36.248],[127.403,36.23],[127.41,36.21],[127.445,36.191],[127.471,36.212],[127.47,36.22],[127.495,36.235],[127.52,36.238],[127.533,36.246],[127.551,36.236],[127.581,36.23],[127.6,36.214],[127.595,36.192],[127.604,36.159],[127.592,36.131],[127.62,36.102],[127.62,36.091],[127.64,36.065],[127.626,36.064],[127.621,36.039],[127.633,36.038],[127.62,36.005],[127.603,36.009],[127.594,36.022],[127.54,36.03],[127.542,36.009],[127.536,35.989],[127.508,35.977],[127.49,35.975],[127.47,35.985],[127.458,35.981],[127.447,36.004],[127.428,36.023],[127.403,36.005],[127.377,36.031],[127.363,36.05],[127.362,36.087],[127.357,36.105],[127.341,36.128],[127.308,36.123],[127.297,36.11],[127.275,36.105],[127.254,36.11],[127.248,36.092],[127.207,36.097],[127.202,36.083],[127.181,36.091],[127.171,36.081],[127.139,36.084],[127.136,36.067],[127.084,36.075],[127.063,36.091],[127.052,36.139],[127.026,36.134],[127.006,36.146],[126.992,36.142],[126.959,36.153],[126.925,36.136],[126.894,36.138],[126.875,36.11],[126.877,36.089],[126.866,36.058],[126.832,36.044],[126.812,36.031],[126.777,36.029],[126.751,36.021],[126.737,35.998],[126.663,36.008],[126.67,36.029],[126.646,36.053],[126.634,36.053],[126.635,36.09],[126.608,36.106],[126.579,36.135],[126.562,36.127],[126.54,36.145],[126.514,36.149],[126.526,36.182],[126.545,36.194],[126.532,36.219],[126.532,36.236],[126.549,36.261],[126.53,36.294],[126.52,36.297],[126.505,36.322],[126.554,36.345],[126.511,36.377],[126.482,36.38],[126.49,36.41],[126.499,36.424],[126.485,36.45],[126.475,36.5],[126.487,36.513],[126.464,36.536],[126.449,36.583],[126.453,36.594],[126.478,36.603],[126.476,36.614],[126.459,36.623],[126.47,36.651],[126.463,36.662],[126.444,36.664],[126.446,36.641],[126.426,36.597],[126.413,36.6],[126.397,36.615],[126.367,36.624],[126.363,36.666],[126.343,36.665],[126.349,36.636],[126.358,36.624],[126.322,36.594],[126.295,36.581],[126.284,36.593],[126.287,36.615],[126.298,36.627],[126.287,36.661],[126.265,36.671],[126.264,36.694],[126.274,36.702],[126.273,36.723],[126.255,36.715],[126.231,36.69],[126.214,36.69],[126.199,36.672],[126.175,36.675],[126.132,36.665],[126.132,36.685],[126.149,36.684],[126.148,36.701],[126.173,36.716],[126.21,36.703],[126.223,36.719],[126.205,36.724],[126.187,36.75],[126.167,36.755],[126.149,36.748],[126.154,36.728],[126.138,36.716],[126.124,36.724],[126.136,36.738],[126.104,36.77],[126.131,36.772],[126.144,36.786],[126.16,36.823],[126.148,36.836],[126.165,36.844],[126.177,36.833],[126.195,36.846],[126.19,36.865],[126.211,36.898],[126.251,36.909],[126.244,36.886],[126.223,36.878],[126.244,36.861],[126.255,36.877],[126.272,36.881],[126.286,36.9],[126.295,36.927],[126.286,36.961],[126.31,36.971],[126.316,36.952],[126.305,36.941],[126.304,36.919],[126.322,36.903],[126.323,36.889],[126.297,36.84],[126.319,36.836],[126.283,36.815],[126.299,36.806],[126.34,36.815],[126.323,36.835],[126.326,36.854],[126.344,36.846],[126.365,36.848],[126.373,36.862],[126.366,36.874],[126.397,36.89],[126.412,36.905],[126.383,36.941],[126.336,36.957],[126.341,36.972],[126.328,36.991],[126.377,37.009],[126.428,37.012],[126.453,37.003],[126.48,36.966],[126.489,36.98],[126.456,37.023],[126.5,37.062],[126.522,37.057],[126.531,37.041],[126.6,37.014],[126.642,36.995],[126.707,36.997],[126.721,36.99],[126.783,36.974],[126.782,36.965],[126.804,36.922],[126.814,36.922],[126.819,36.894],[126.829,36.884],[126.834,36.859],[126.85,36.875],[126.883,36.885],[126.914,36.888],[126.911,36.902]]]},{"c":"33","n":"충청북도","p":[[[128.654,37.063],[128.633,37.036],[128.586,37.041],[128.567,37.029],[128.574,37.013],[128.547,36.99],[128.517,36.984],[128.516,36.974],[128.465,36.945],[128.462,36.932],[128.444,36.925],[128.443,36.899],[128.427,36.874],[128.45,36.862],[128.451,36.846],[128.423,36.809],[128.384,36.811],[128.369,36.798],[128.336,36.814],[128.323,36.812],[128.299,36.832],[128.285,36.854],[128.244,36.87],[128.236,36.845],[128.216,36.846],[128.221,36.812],[128.167,36.817],[128.142,36.831],[128.114,36.816],[128.109,36.803],[128.086,36.801],[128.061,36.813],[128.057,36.79],[128.035,36.745],[128.071,36.719],[128.074,36.704],[128.05,36.705],[128.024,36.723],[128.005,36.714],[127.989,36.715],[127.963,36.734],[127.951,36.715],[127.934,36.703],[127.934,36.69],[127.89,36.688],[127.934,36.662],[127.941,36.648],[127.934,36.615],[127.892,36.627],[127.876,36.652],[127.865,36.632],[127.85,36.63],[127.852,36.61],[127.826,36.61],[127.8,36.588],[127.826,36.568],[127.864,36.565],[127.876,36.552],[127.876,36.535],[127.903,36.522],[127.909,36.505],[127.883,36.478],[127.885,36.458],[127.875,36.434],[127.885,36.419],[127.875,36.403],[127.893,36.354],[127.884,36.342],[127.854,36.327],[127.843,36.307],[127.853,36.273],[127.882,36.272],[127.894,36.289],[127.933,36.275],[127.951,36.254],[127.97,36.248],[127.984,36.261],[128.012,36.269],[128.049,36.254],[128.032,36.237],[128.053,36.212],[128.055,36.198],[128.041,36.191],[128.016,36.206],[127.988,36.197],[127.978,36.185],[127.998,36.15],[127.989,36.126],[127.969,36.115],[127.96,36.092],[127.964,36.065],[127.938,36.048],[127.919,36.051],[127.906,36.036],[127.879,36.019],[127.856,36.036],[127.803,36.024],[127.79,36.011],[127.733,36.029],[127.708,36.03],[127.699,36.053],[127.687,36.059],[127.662,36.036],[127.657,36.053],[127.64,36.065],[127.62,36.091],[127.62,36.102],[127.592,36.131],[127.604,36.159],[127.595,36.192],[127.6,36.214],[127.581,36.23],[127.551,36.236],[127.533,36.246],[127.52,36.238],[127.495,36.235],[127.488,36.256],[127.499,36.284],[127.503,36.33],[127.529,36.366],[127.527,36.384],[127.557,36.396],[127.545,36.418],[127.518,36.419],[127.505,36.405],[127.491,36.43],[127.505,36.446],[127.481,36.455],[127.455,36.447],[127.438,36.454],[127.405,36.453],[127.406,36.48],[127.398,36.489],[127.409,36.492],[127.411,36.521],[127.404,36.538],[127.386,36.539],[127.375,36.557],[127.339,36.56],[127.327,36.578],[127.31,36.581],[127.303,36.613],[127.281,36.632],[127.289,36.651],[127.303,36.656],[127.31,36.679],[127.288,36.688],[127.31,36.702],[127.31,36.718],[127.327,36.73],[127.343,36.729],[127.339,36.75],[127.39,36.756],[127.399,36.744],[127.414,36.754],[127.414,36.769],[127.397,36.781],[127.404,36.792],[127.384,36.811],[127.358,36.826],[127.336,36.828],[127.338,36.852],[127.308,36.86],[127.31,36.882],[127.292,36.891],[127.311,36.926],[127.346,36.941],[127.352,36.95],[127.381,36.949],[127.404,36.965],[127.387,36.982],[127.396,36.995],[127.432,36.999],[127.46,37.018],[127.46,37.041],[127.489,37.051],[127.501,37.045],[127.518,37.055],[127.555,37.041],[127.569,37.044],[127.568,37.06],[127.603,37.083],[127.633,37.093],[127.64,37.138],[127.689,37.132],[127.72,37.181],[127.729,37.18],[127.739,37.207],[127.75,37.214],[127.746,37.208],[127.756,37.173],[127.77,37.154],[127.791,37.142],[127.817,37.144],[127.864,37.154],[127.875,37.161],[127.904,37.149],[127.924,37.162],[127.939,37.186],[127.923,37.223],[127.95,37.244],[127.987,37.255],[128.021,37.242],[128.022,37.231],[128.041,37.213],[128.032,37.199],[128.042,37.186],[128.081,37.191],[128.114,37.205],[128.127,37.218],[128.157,37.213],[128.175,37.216],[128.176,37.23],[128.203,37.246],[128.223,37.237],[128.231,37.225],[128.255,37.225],[128.271,37.205],[128.318,37.221],[128.336,37.213],[128.328,37.194],[128.278,37.169],[128.267,37.158],[128.276,37.144],[128.296,37.135],[128.333,37.147],[128.339,37.155],[128.403,37.144],[128.399,37.126],[128.426,37.11],[128.474,37.107],[128.489,37.117],[128.515,37.111],[128.517,37.1],[128.54,37.087],[128.564,37.087],[128.594,37.075],[128.63,37.072],[128.654,37.063]]]},{"c":"32","n":"강원도","p":[[[129.366,37.144],[129.342,37.142],[129.306,37.126],[129.297,37.112],[129.274,37.114],[129.268,37.099],[129.252,37.093],[129.228,37.071],[129.235,37.042],[129.197,37.038],[129.143,37.079],[129.098,37.098],[129.079,37.09],[129.067,37.065],[128.985,37.081],[128.963,37.075],[128.947,37.092],[128.925,37.089],[128.898,37.042],[128.878,37.042],[128.849,37.049],[128.829,37.075],[128.811,37.075],[128.787,37.085],[128.767,37.061],[128.754,37.055],[128.764,37.032],[128.754,37.026],[128.737,37.037],[128.702,37.038],[128.691,37.05],[128.654,37.063],[128.63,37.072],[128.594,37.075],[128.564,37.087],[128.54,37.087],[128.517,37.1],[128.515,37.111],[128.489,37.117],[128.474,37.107],[128.426,37.11],[128.399,37.126],[128.403,37.144],[128.339,37.155],[128.333,37.147],[128.296,37.135],[128.276,37.144],[128.267,37.158],[128.278,37.169],[128.328,37.194],[128.336,37.213],[128.318,37.221],[128.271,37.205],[128.255,37.225],[128.231,37.225],[128.223,37.237],[128.203,37.246],[128.176,37.23],[128.175,37.216],[128.157,37.213],[128.127,37.218],[128.114,37.205],[128.081,37.191],[128.042,37.186],[128.032,37.199],[128.041,37.213],[128.022,37.231],[128.021,37.242],[127.987,37.255],[127.95,37.244],[127.923,37.223],[127.939,37.186],[127.924,37.162],[127.904,37.149],[127.875,37.161],[127.864,37.154],[127.817,37.144],[127.791,37.142],[127.77,37.154],[127.756,37.173],[127.746,37.208],[127.75,37.214],[127.751,37.245],[127.76,37.255],[127.757,37.295],[127.771,37.305],[127.762,37.327],[127.762,37.364],[127.78,37.368],[127.78,37.386],[127.797,37.421],[127.806,37.426],[127.798,37.461],[127.777,37.489],[127.776,37.503],[127.809,37.532],[127.845,37.536],[127.852,37.55],[127.815,37.562],[127.795,37.583],[127.768,37.58],[127.756,37.589],[127.71,37.584],[127.699,37.598],[127.656,37.62],[127.63,37.64],[127.605,37.649],[127.582,37.63],[127.561,37.626],[127.539,37.64],[127.555,37.659],[127.552,37.683],[127.565,37.718],[127.543,37.716],[127.51,37.728],[127.547,37.758],[127.524,37.789],[127.538,37.806],[127.528,37.821],[127.535,37.839],[127.565,37.853],[127.587,37.873],[127.603,37.872],[127.62,37.904],[127.616,37.937],[127.605,37.952],[127.546,37.965],[127.55,37.976],[127.542,37.998],[127.504,37.997],[127.474,38.003],[127.46,38.013],[127.446,38.056],[127.449,38.068],[127.443,38.105],[127.433,38.112],[127.415,38.099],[127.406,38.11],[127.386,38.112],[127.323,38.092],[127.313,38.113],[127.285,38.114],[127.278,38.134],[127.289,38.15],[127.291,38.174],[127.273,38.179],[127.258,38.16],[127.225,38.144],[127.192,38.158],[127.182,38.182],[127.169,38.197],[127.172,38.211],[127.165,38.229],[127.151,38.24],[127.132,38.23],[127.112,38.239],[127.116,38.263],[127.111,38.289],[127.139,38.307],[127.145,38.326],[127.161,38.332],[127.184,38.314],[127.199,38.316],[127.246,38.336],[127.261,38.329],[127.296,38.325],[127.313,38.314],[127.34,38.329],[127.35,38.326],[127.39,38.337],[127.427,38.332],[127.451,38.315],[127.478,38.315],[127.489,38.301],[127.511,38.301],[127.544,38.323],[127.59,38.337],[127.609,38.338],[127.641,38.326],[127.692,38.33],[127.702,38.341],[127.732,38.335],[127.749,38.345],[127.78,38.351],[127.804,38.323],[127.846,38.327],[127.887,38.341],[127.928,38.334],[127.98,38.318],[128.066,38.311],[128.153,38.349],[128.218,38.38],[128.245,38.4],[128.251,38.41],[128.284,38.433],[128.304,38.469],[128.318,38.562],[128.313,38.589],[128.323,38.607],[128.353,38.611],[128.399,38.564],[128.408,38.539],[128.426,38.52],[128.425,38.503],[128.442,38.475],[128.47,38.449],[128.458,38.444],[128.46,38.427],[128.474,38.408],[128.518,38.369],[128.529,38.336],[128.553,38.311],[128.571,38.266],[128.592,38.24],[128.589,38.228],[128.599,38.196],[128.612,38.181],[128.612,38.148],[128.638,38.114],[128.669,38.089],[128.68,38.063],[128.705,38.038],[128.729,38.021],[128.738,38.002],[128.775,37.952],[128.793,37.942],[128.793,37.932],[128.837,37.895],[128.833,37.882],[128.88,37.837],[128.882,37.827],[128.99,37.737],[129.016,37.706],[129.059,37.673],[129.06,37.658],[129.047,37.64],[129.057,37.619],[129.12,37.574],[129.124,37.554],[129.115,37.537],[129.125,37.518],[129.162,37.474],[129.19,37.453],[129.2,37.413],[129.224,37.394],[129.253,37.378],[129.254,37.361],[129.27,37.34],[129.272,37.32],[129.305,37.301],[129.303,37.29],[129.332,37.278],[129.329,37.263],[129.359,37.233],[129.344,37.223],[129.35,37.209],[129.342,37.192],[129.344,37.175],[129.366,37.144]]]},{"c":"31","n":"경기도","p":[[[126.61,37.306],[126.586,37.292],[126.572,37.277],[126.599,37.26],[126.611,37.26],[126.625,37.234],[126.652,37.223],[126.649,37.208],[126.614,37.216],[126.605,37.205],[126.587,37.218],[126.571,37.201],[126.546,37.204],[126.544,37.222],[126.563,37.239],[126.565,37.253],[126.551,37.277],[126.57,37.279],[126.581,37.293],[126.61,37.306]],[[127.75,37.214],[127.739,37.207],[127.729,37.18],[127.72,37.181],[127.689,37.132],[127.64,37.138],[127.633,37.093],[127.603,37.083],[127.568,37.06],[127.569,37.044],[127.555,37.041],[127.518,37.055],[127.501,37.045],[127.489,37.051],[127.46,37.041],[127.46,37.018],[127.432,36.999],[127.396,36.995],[127.387,36.982],[127.404,36.965],[127.381,36.949],[127.352,36.95],[127.346,36.941],[127.311,36.926],[127.292,36.891],[127.272,36.91],[127.246,36.915],[127.222,36.927],[127.204,36.949],[127.192,36.95],[127.146,36.969],[127.132,36.962],[127.116,36.97],[127.076,36.936],[127.063,36.937],[127.034,36.925],[126.998,36.933],[126.911,36.902],[126.907,36.923],[126.889,36.933],[126.866,36.93],[126.864,36.946],[126.848,36.957],[126.827,36.984],[126.826,36.993],[126.8,37.005],[126.791,37.026],[126.753,37.026],[126.75,37.046],[126.763,37.065],[126.772,37.1],[126.761,37.108],[126.771,37.125],[126.797,37.126],[126.807,37.149],[126.792,37.172],[126.78,37.162],[126.749,37.163],[126.73,37.136],[126.691,37.113],[126.675,37.135],[126.685,37.146],[126.663,37.159],[126.668,37.206],[126.679,37.221],[126.667,37.234],[126.689,37.26],[126.736,37.248],[126.759,37.252],[126.791,37.242],[126.792,37.264],[126.828,37.286],[126.806,37.293],[126.775,37.287],[126.728,37.299],[126.725,37.311],[126.695,37.331],[126.691,37.346],[126.703,37.352],[126.739,37.393],[126.755,37.42],[126.771,37.425],[126.78,37.448],[126.77,37.469],[126.744,37.484],[126.747,37.511],[126.762,37.514],[126.77,37.551],[126.773,37.546],[126.824,37.538],[126.831,37.524],[126.816,37.49],[126.824,37.473],[126.842,37.473],[126.87,37.491],[126.905,37.431],[126.928,37.446],[126.942,37.433],[126.965,37.438],[127.006,37.464],[127.013,37.453],[127.039,37.454],[127.038,37.438],[127.054,37.426],[127.068,37.426],[127.1,37.456],[127.12,37.459],[127.149,37.474],[127.163,37.497],[127.142,37.506],[127.165,37.542],[127.181,37.544],[127.184,37.558],[127.176,37.577],[127.103,37.557],[127.104,37.581],[127.12,37.602],[127.11,37.642],[127.094,37.647],[127.097,37.686],[127.084,37.694],[127.052,37.685],[127.018,37.698],[127.01,37.682],[126.995,37.675],[126.982,37.652],[126.987,37.634],[126.977,37.629],[126.949,37.656],[126.915,37.642],[126.903,37.61],[126.904,37.592],[126.878,37.577],[126.853,37.573],[126.823,37.588],[126.808,37.601],[126.796,37.579],[126.746,37.591],[126.727,37.589],[126.701,37.615],[126.659,37.635],[126.638,37.625],[126.63,37.604],[126.611,37.601],[126.575,37.585],[126.556,37.607],[126.552,37.624],[126.531,37.65],[126.537,37.664],[126.525,37.674],[126.529,37.7],[126.521,37.71],[126.528,37.735],[126.53,37.746],[126.517,37.764],[126.538,37.769],[126.557,37.766],[126.569,37.753],[126.612,37.75],[126.641,37.776],[126.664,37.787],[126.676,37.828],[126.662,37.836],[126.693,37.864],[126.674,37.884],[126.679,37.895],[126.668,37.918],[126.675,37.953],[126.693,37.941],[126.716,37.937],[126.747,37.949],[126.742,37.97],[126.765,37.982],[126.782,37.98],[126.798,37.991],[126.832,37.99],[126.825,38.009],[126.834,38.031],[126.856,38.029],[126.875,38.016],[126.883,38.036],[126.895,38.049],[126.895,38.072],[126.869,38.078],[126.852,38.092],[126.83,38.076],[126.824,38.085],[126.798,38.079],[126.787,38.096],[126.75,38.125],[126.772,38.152],[126.828,38.195],[126.875,38.22],[126.897,38.202],[126.928,38.201],[126.955,38.208],[126.967,38.195],[126.986,38.209],[126.977,38.231],[126.993,38.234],[127.028,38.255],[127.072,38.268],[127.111,38.289],[127.116,38.263],[127.112,38.239],[127.132,38.23],[127.151,38.24],[127.165,38.229],[127.172,38.211],[127.169,38.197],[127.182,38.182],[127.192,38.158],[127.225,38.144],[127.258,38.16],[127.273,38.179],[127.291,38.174],[127.289,38.15],[127.278,38.134],[127.285,38.114],[127.313,38.113],[127.323,38.092],[127.386,38.112],[127.406,38.11],[127.415,38.099],[127.433,38.112],[127.443,38.105],[127.449,38.068],[127.446,38.056],[127.46,38.013],[127.474,38.003],[127.504,37.997],[127.542,37.998],[127.55,37.976],[127.546,37.965],[127.605,37.952],[127.616,37.937],[127.62,37.904],[127.603,37.872],[127.587,37.873],[127.565,37.853],[127.535,37.839],[127.528,37.821],[127.538,37.806],[127.524,37.789],[127.547,37.758],[127.51,37.728],[127.543,37.716],[127.565,37.718],[127.552,37.683],[127.555,37.659],[127.539,37.64],[127.561,37.626],[127.582,37.63],[127.605,37.649],[127.63,37.64],[127.656,37.62],[127.699,37.598],[127.71,37.584],[127.756,37.589],[127.768,37.58],[127.795,37.583],[127.815,37.562],[127.852,37.55],[127.845,37.536],[127.809,37.532],[127.776,37.503],[127.777,37.489],[127.798,37.461],[127.806,37.426],[127.797,37.421],[127.78,37.386],[127.78,37.368],[127.762,37.364],[127.762,37.327],[127.771,37.305],[127.757,37.295],[127.76,37.255],[127.751,37.245],[127.75,37.214]]]},{"c":"29","n":"세종특별자치시","p":[[[127.288,36.688],[127.31,36.679],[127.303,36.656],[127.289,36.651],[127.281,36.632],[127.303,36.613],[127.31,36.581],[127.327,36.578],[127.339,36.56],[127.375,36.557],[127.386,36.539],[127.404,36.538],[127.411,36.521],[127.409,36.492],[127.398,36.489],[127.383,36.497],[127.361,36.482],[127.363,36.468],[127.355,36.445],[127.329,36.419],[127.296,36.419],[127.284,36.412],[127.26,36.405],[127.228,36.419],[127.203,36.439],[127.207,36.456],[127.173,36.509],[127.184,36.519],[127.175,36.533],[127.196,36.562],[127.195,36.578],[127.184,36.593],[127.158,36.603],[127.16,36.633],[127.157,36.662],[127.167,36.675],[127.163,36.689],[127.145,36.689],[127.136,36.704],[127.165,36.731],[127.206,36.722],[127.25,36.692],[127.288,36.688]]]},{"c":"26","n":"울산광역시","p":[[[129.452,35.648],[129.444,35.628],[129.465,35.601],[129.467,35.583],[129.455,35.569],[129.461,35.556],[129.448,35.519],[129.442,35.483],[129.387,35.472],[129.352,35.445],[129.367,35.439],[129.365,35.408],[129.348,35.373],[129.361,35.353],[129.325,35.343],[129.307,35.326],[129.282,35.338],[129.286,35.36],[129.268,35.383],[129.22,35.376],[129.205,35.385],[129.222,35.406],[129.199,35.436],[129.18,35.429],[129.163,35.432],[129.142,35.446],[129.112,35.477],[129.109,35.492],[129.025,35.522],[128.997,35.526],[128.973,35.558],[128.998,35.566],[129.022,35.581],[129.028,35.598],[129.023,35.612],[129.006,35.617],[129.05,35.647],[129.076,35.637],[129.07,35.656],[129.072,35.678],[129.091,35.699],[129.138,35.709],[129.148,35.722],[129.163,35.712],[129.21,35.718],[129.236,35.701],[129.256,35.698],[129.265,35.688],[129.257,35.663],[129.263,35.651],[129.305,35.645],[129.356,35.677],[129.415,35.661],[129.452,35.648]]]},{"c":"25","n":"대전광역시","p":[[[127.495,36.235],[127.47,36.22],[127.471,36.212],[127.445,36.191],[127.41,36.21],[127.403,36.23],[127.389,36.248],[127.392,36.262],[127.375,36.269],[127.362,36.261],[127.367,36.217],[127.355,36.209],[127.343,36.186],[127.326,36.2],[127.317,36.218],[127.285,36.233],[127.283,36.262],[127.252,36.28],[127.261,36.293],[127.262,36.324],[127.28,36.346],[127.273,36.358],[127.283,36.372],[127.284,36.412],[127.296,36.419],[127.329,36.419],[127.355,36.445],[127.363,36.468],[127.361,36.482],[127.383,36.497],[127.398,36.489],[127.406,36.48],[127.405,36.453],[127.438,36.454],[127.455,36.447],[127.481,36.455],[127.505,36.446],[127.491,36.43],[127.505,36.405],[127.518,36.419],[127.545,36.418],[127.557,36.396],[127.527,36.384],[127.529,36.366],[127.503,36.33],[127.499,36.284],[127.488,36.256],[127.495,36.235]]]},{"c":"24","n":"광주광역시","p":[[[126.909,35.256],[126.933,35.248],[126.935,35.237],[126.978,35.184],[127.004,35.185],[127.023,35.164],[127.01,35.152],[127.011,35.121],[126.989,35.091],[126.969,35.086],[126.954,35.07],[126.934,35.071],[126.924,35.087],[126.874,35.071],[126.858,35.075],[126.821,35.049],[126.797,35.058],[126.78,35.05],[126.764,35.088],[126.742,35.104],[126.689,35.109],[126.68,35.103],[126.654,35.117],[126.656,35.162],[126.673,35.166],[126.662,35.189],[126.68,35.191],[126.689,35.212],[126.705,35.205],[126.72,35.209],[126.722,35.224],[126.739,35.249],[126.766,35.251],[126.758,35.231],[126.808,35.216],[126.841,35.227],[126.876,35.247],[126.892,35.244],[126.909,35.256]]]},{"c":"23","n":"인천광역시","p":[[[126.11,37.27],[126.121,37.255],[126.147,37.236],[126.163,37.233],[126.144,37.211],[126.119,37.206],[126.115,37.219],[126.093,37.227],[126.092,37.244],[126.11,37.27]],[[126.473,37.285],[126.491,37.28],[126.504,37.255],[126.484,37.247],[126.46,37.223],[126.433,37.232],[126.44,37.27],[126.473,37.285]],[[126.414,37.409],[126.443,37.383],[126.437,37.368],[126.415,37.363],[126.401,37.398],[126.414,37.409]],[[126.581,37.498],[126.587,37.487],[126.569,37.477],[126.544,37.475],[126.509,37.463],[126.498,37.445],[126.444,37.418],[126.422,37.419],[126.418,37.43],[126.397,37.443],[126.374,37.445],[126.358,37.464],[126.375,37.469],[126.434,37.501],[126.467,37.497],[126.485,37.501],[126.5,37.529],[126.528,37.525],[126.568,37.512],[126.581,37.498]],[[126.796,37.579],[126.77,37.551],[126.762,37.514],[126.747,37.511],[126.744,37.484],[126.77,37.469],[126.78,37.448],[126.771,37.425],[126.755,37.42],[126.739,37.393],[126.731,37.385],[126.663,37.34],[126.619,37.34],[126.614,37.371],[126.6,37.382],[126.6,37.426],[126.595,37.461],[126.606,37.494],[126.605,37.525],[126.608,37.551],[126.595,37.557],[126.575,37.585],[126.611,37.601],[126.63,37.604],[126.638,37.625],[126.659,37.635],[126.701,37.615],[126.727,37.589],[126.746,37.591],[126.796,37.579]],[[126.331,37.747],[126.323,37.713],[126.348,37.696],[126.374,37.692],[126.379,37.665],[126.345,37.641],[126.327,37.639],[126.329,37.659],[126.319,37.679],[126.287,37.693],[126.272,37.706],[126.287,37.715],[126.291,37.741],[126.331,37.747]],[[126.268,37.813],[126.295,37.802],[126.33,37.802],[126.337,37.796],[126.319,37.772],[126.294,37.762],[126.274,37.767],[126.25,37.763],[126.229,37.75],[126.209,37.766],[126.224,37.788],[126.225,37.803],[126.239,37.814],[126.268,37.813]],[[126.528,37.735],[126.521,37.71],[126.529,37.7],[126.525,37.674],[126.537,37.664],[126.531,37.65],[126.533,37.636],[126.549,37.602],[126.526,37.594],[126.518,37.577],[126.503,37.587],[126.482,37.581],[126.475,37.595],[126.438,37.59],[126.406,37.591],[126.38,37.607],[126.374,37.63],[126.407,37.648],[126.389,37.687],[126.354,37.703],[126.345,37.718],[126.344,37.746],[126.357,37.756],[126.351,37.789],[126.374,37.803],[126.396,37.823],[126.439,37.828],[126.467,37.802],[126.51,37.781],[126.514,37.761],[126.528,37.735]],[[124.709,37.844],[124.723,37.844],[124.722,37.814],[124.714,37.804],[124.686,37.803],[124.681,37.819],[124.709,37.844]],[[124.687,37.979],[124.708,37.981],[124.731,37.976],[124.733,37.951],[124.71,37.941],[124.698,37.913],[124.639,37.921],[124.613,37.958],[124.617,37.974],[124.64,37.966],[124.687,37.979]]]},{"c":"22","n":"대구광역시","p":[[[128.529,35.679],[128.511,35.672],[128.507,35.636],[128.487,35.632],[128.449,35.635],[128.434,35.62],[128.384,35.604],[128.373,35.608],[128.388,35.609],[128.405,35.639],[128.384,35.652],[128.358,35.678],[128.353,35.7],[128.362,35.704],[128.42,35.69],[128.435,35.7],[128.435,35.722],[128.395,35.743],[128.389,35.76],[128.41,35.794],[128.422,35.806],[128.471,35.805],[128.48,35.824],[128.462,35.838],[128.425,35.848],[128.392,35.847],[128.388,35.862],[128.406,35.886],[128.42,35.918],[128.443,35.932],[128.478,35.933],[128.47,35.904],[128.478,35.892],[128.495,35.893],[128.526,35.915],[128.537,35.937],[128.529,35.973],[128.558,35.968],[128.592,35.976],[128.62,36.003],[128.693,36.012],[128.728,36.002],[128.734,35.982],[128.748,35.968],[128.741,35.953],[128.747,35.941],[128.741,35.925],[128.759,35.912],[128.765,35.881],[128.754,35.854],[128.711,35.824],[128.719,35.803],[128.685,35.787],[128.698,35.755],[128.694,35.729],[128.686,35.719],[128.666,35.717],[128.64,35.703],[128.625,35.7],[128.612,35.722],[128.619,35.734],[128.582,35.736],[128.546,35.716],[128.529,35.679]]]},{"c":"21","n":"부산광역시","p":[[[129.307,35.326],[129.268,35.316],[129.263,35.278],[129.245,35.261],[129.256,35.244],[129.236,35.211],[129.227,35.183],[129.201,35.175],[129.196,35.158],[129.139,35.151],[129.123,35.131],[129.13,35.107],[129.125,35.097],[129.097,35.096],[129.069,35.105],[129.068,35.12],[129.052,35.12],[129.043,35.105],[129.071,35.093],[129.082,35.068],[129.098,35.057],[129.085,35.047],[129.037,35.082],[129.025,35.059],[129.004,35.045],[128.984,35.045],[128.969,35.03],[128.953,35.075],[128.923,35.083],[128.914,35.076],[128.837,35.077],[128.852,35.049],[128.852,35.03],[128.838,35.01],[128.808,35.017],[128.814,35.037],[128.799,35.051],[128.823,35.058],[128.833,35.07],[128.825,35.096],[128.844,35.104],[128.834,35.126],[128.804,35.139],[128.796,35.155],[128.846,35.155],[128.868,35.164],[128.884,35.179],[128.873,35.199],[128.886,35.211],[128.926,35.213],[129.0,35.231],[129.015,35.27],[129.052,35.277],[129.062,35.292],[129.076,35.287],[129.091,35.3],[129.114,35.306],[129.13,35.342],[129.151,35.361],[129.177,35.348],[129.196,35.358],[129.205,35.385],[129.22,35.376],[129.268,35.383],[129.286,35.36],[129.282,35.338],[129.307,35.326]]]},{"c":"11","n":"서울특별시","p":[[[126.77,37.551],[126.796,37.579],[126.808,37.601],[126.823,37.588],[126.853,37.573],[126.878,37.577],[126.904,37.592],[126.903,37.61],[126.915,37.642],[126.949,37.656],[126.977,37.629],[126.987,37.634],[126.982,37.652],[126.995,37.675],[127.01,37.682],[127.018,37.698],[127.052,37.685],[127.084,37.694],[127.097,37.686],[127.094,37.647],[127.11,37.642],[127.12,37.602],[127.104,37.581],[127.103,37.557],[127.176,37.577],[127.184,37.558],[127.181,37.544],[127.165,37.542],[127.142,37.506],[127.163,37.497],[127.149,37.474],[127.12,37.459],[127.1,37.456],[127.068,37.426],[127.054,37.426],[127.038,37.438],[127.039,37.454],[127.013,37.453],[127.006,37.464],[126.965,37.438],[126.942,37.433],[126.928,37.446],[126.905,37.431],[126.87,37.491],[126.842,37.473],[126.824,37.473],[126.816,37.49],[126.831,37.524],[126.824,37.538],[126.773,37.546],[126.77,37.551]]]}];
+const PCODE={"11":"seoul","21":"busan","22":"daegu","23":"incheon","24":"gwangju","25":"daejeon","26":"ulsan","29":"sejong","31":"gyeonggi","32":"gangwon","33":"chungbuk","34":"chungnam","35":"jeonbuk","36":"jeonnam","37":"gyeongbuk","38":"gyeongnam","39":"jeju"};
+const KX=Math.cos(36*Math.PI/180),SC=100;
+const prj=([lo,la])=>[(lo-124.5)*KX*SC,(38.75-la)*SC];
+const FULL={x:0,y:0,w:(131.0-124.5)*KX*SC,h:(38.75-33.05)*SC};
+const isPub=x=>/국립|공립|교대|과학기술원|사관|특수/.test(x.note)||/교육대학교|국립|경찰대학|KAIST|GIST|DGIST|UNIST|도립|한국교원|한국체육|한국예술|한국전통/.test(x.n);
+const cat=x=>x.t==="2"?"col":(isPub(x)?"pub":"pri");
+const CATS=[["pub","국공립·특수 4년제"],["pri","사립 4년제"],["col","전문대학"]];
+const ALL=[];for(const [k] of REGIONS)for(const x of DATA[k])if(GEO[x.n])ALL.push({...x,k,c:cat(x),p:prj(GEO[x.n])});
+const MS={on:{pub:true,pri:true,col:true},q:"",sel:null,vb:{...FULL},prov:null};
+const svg=$("ksvg"),NS="http://www.w3.org/2000/svg";
+const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e};
+const gProv=el("g",{}),gPname=el("g",{}),gDot=el("g",{}),gLbl=el("g",{});
+svg.append(gProv,gPname,gDot,gLbl);
+const pCent={};
+for(const pv of PROV){
+  const d=pv.p.map(r=>"M"+r.map(pt=>prj(pt).map(v=>v.toFixed(1)).join(",")).join("L")+"Z").join("");
+  const path=el("path",{d,class:"prov","data-k":PCODE[pv.c]});gProv.appendChild(path);
+  let bx=[1e9,1e9,-1e9,-1e9],big=null,ba=0;
+  for(const r of pv.p){const q=r.map(prj);let a=0;for(let i=0;i<q.length-1;i++)a+=q[i][0]*q[i+1][1]-q[i+1][0]*q[i][1];
+    if(Math.abs(a)>ba){ba=Math.abs(a);big=q}for(const [x,y] of q){bx[0]=Math.min(bx[0],x);bx[1]=Math.min(bx[1],y);bx[2]=Math.max(bx[2],x);bx[3]=Math.max(bx[3],y)}}
+  const cx=big.reduce((s,p)=>s+p[0],0)/big.length,cy=big.reduce((s,p)=>s+p[1],0)/big.length;
+  pCent[PCODE[pv.c]]={cx,cy,bx};
+}
+const LBLPOS={seoul:[0,-14],incheon:[-14,8],sejong:[0,-6],daejeon:[0,6],gwangju:[0,0],daegu:[0,0],ulsan:[8,0],busan:[8,6]};
+const pnames={};
+for(const [k,label] of REGIONS){const c=pCent[k];if(!c)continue;const o=LBLPOS[k]||[0,0];const t=el("text",{class:"pname",x:c.cx+o[0],y:c.cy+o[1]});t.textContent=label;gPname.appendChild(t);pnames[k]=t}
+const dots=ALL.map((x,i)=>{const c=el("circle",{cx:x.p[0],cy:x.p[1],class:"dot "+x.c,"data-i":i});gDot.appendChild(c);return c});
+// 범례·필터
+function legend(){
+  const vis=ALL.filter(x=>!MS.prov||x.k===MS.prov);
+  $("legend").innerHTML=`<h4>${MS.prov?nameOf[MS.prov]:"전국"} 대학 분포</h4>`+CATS.map(([c,l])=>`<label><input type="checkbox" data-c="${c}" ${MS.on[c]?"checked":""}><span class="sw ${c}"></span>${l}<span class="n">${vis.filter(x=>x.c===c).length}</span></label>`).join("");
+  $("legend").querySelectorAll("input").forEach(i=>i.onchange=()=>{MS.on[i.dataset.c]=i.checked;draw()});
+}
+function rstat(){
+  const rows=REGIONS.map(([k,l])=>{const a=ALL.filter(x=>x.k===k);return [k,l,a.filter(x=>x.c==="pub").length,a.filter(x=>x.c==="pri").length,a.filter(x=>x.c==="col").length]});
+  $("rstat").innerHTML=`<h4>시·도별 대학 현황</h4><table><thead><tr><th>시·도</th><th>국공립</th><th>사립</th><th>전문대</th><th>합계</th></tr></thead><tbody>${rows.map(r=>`<tr data-k="${r[0]}" class="${MS.prov===r[0]?"on":""}"><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td><td>${r[2]+r[3]+r[4]}</td></tr>`).join("")}</tbody></table>`;
+  $("rstat").querySelectorAll("tbody tr").forEach(tr=>tr.onclick=()=>zoomProv(tr.dataset.k));
+}
+function card(x){
+  if(!x){$("card").innerHTML=`<p class="muted">지도에서 점을 누르면 대학 현황이 여기에 나옵니다.</p>`;return}
+  const inf=INFO[x.n],st=STATS[norm(x.n)];
+  const home=x.h?(/^(erica|mirae|sejong|wise)\./.test(x.h)?`https://${x.h}`:`https://www.${x.h}`):`https://search.naver.com/search.naver?query=${enc(x.n)}`;
+  const adm=x.a?`https://${x.a}`:`https://search.naver.com/search.naver?query=${enc(x.n+" 입학처")}`;
+  const lab={pub:"국공립·특수",pri:"사립",col:"전문대학"}[x.c];
+  $("card").innerHTML=`<h3>${x.n}</h3>
+   <div class="meta"><span class="chip ${x.t==="4"?"u":"c"}">${x.t==="4"?"4년제":"전문대"}</span><span>${lab}</span><span>· ${nameOf[x.k]}</span>${x.note?`<span>· ${x.note}</span>`:""}</div>
+   <p>${inf?inf.f:`<span class="muted">정리된 특색 정보가 없습니다. 홈페이지나 대학알리미에서 확인하세요.</span>`}</p>
+   ${inf&&inf.m.length?`<div><div class="dl">대표·이색 학과</div><div class="majors" style="margin-top:4px">${inf.m.map(m=>`<span class="mj">${m}</span>`).join("")}</div></div>`:""}
+   ${st?`<div class="stats"><span class="stat"><small>취업률</small><b>${st.e??"–"}</b></span><span class="stat"><small>평균 등록금</small><b>${st.t??"–"}</b></span></div>`:""}
+   <div class="links"><a class="adm" href="${adm}" target="_blank" rel="noopener">입학처</a><a href="${home}" target="_blank" rel="noopener">홈페이지</a><a href="https://map.naver.com/p/search/${enc(x.n)}" target="_blank" rel="noopener">지도</a><a href="https://search.naver.com/search.naver?query=${enc(x.n+" 취업률")}" target="_blank" rel="noopener">취업률</a><a href="https://search.naver.com/search.naver?query=${enc(x.n+" 등록금")}" target="_blank" rel="noopener">등록금</a></div>`;
+}
+const match=x=>{if(!MS.q)return false;const i=INFO[x.n];return (x.n+x.note+(i?i.f+i.m.join(""):"")).includes(MS.q)};
+let raf=0;function draw(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint()})}
+function paint(){
+  const v=MS.vb;svg.setAttribute("viewBox",`${v.x} ${v.y} ${v.w} ${v.h}`);
+  const W=svg.clientWidth||800,H=svg.clientHeight||600;
+  const u=Math.max(v.w/W,v.h/H); // user units per px
+  const k=FULL.h/v.h;
+  gProv.querySelectorAll(".prov").forEach(p=>{p.style.strokeWidth=(0.9*u)+"px";p.classList.toggle("on",p.dataset.k===MS.prov)});
+  const pf=13*u;for(const k2 in pnames){const t=pnames[k2];t.setAttribute("font-size",pf*(k>4?1.1:1));t.style.display=(k<5||MS.prov===k2&&k<9)?"":"none";t.setAttribute("opacity",k>2.5?.45:.85)}
+  const r=(k<2?3.2:k<5?4.2:5.2)*u;
+  const hits=[];
+  ALL.forEach((x,i)=>{const d=dots[i];const on=MS.on[x.c];const m=match(x);
+    d.style.display=on?"":"none";d.setAttribute("r",(x===MS.sel?r*1.7:m?r*1.4:r));d.style.strokeWidth=((x===MS.sel||m)?1.8:0.8)*u+"px";
+    d.classList.toggle("dim",!!MS.q&&!m);d.classList.toggle("hit",m);d.classList.toggle("sel",x===MS.sel);if(m&&on)hits.push(x)});
+  // 이름표: 우선순위 + 겹침 제거
+  gLbl.textContent="";
+  const fs=12*u,boxes=[];
+  const pr=x=>x===MS.sel?0:match(x)?1:x.c==="pub"?2:x.c==="pri"?3:4;
+  const cand=ALL.filter(x=>MS.on[x.c]&&(x===MS.sel||match(x)||(!MS.q&&(k>=1.5&&(x.t==="4"||k>=3)))))
+    .filter(x=>x.p[0]>v.x-20*u&&x.p[0]<v.x+v.w&&x.p[1]>v.y&&x.p[1]<v.y+v.h+10*u).sort((a,b)=>pr(a)-pr(b));
+  for(const x of cand){
+    const nm=x.n.replace(/대학교$/,"대").replace(/ (캠퍼스|미래캠퍼스|글로컬캠퍼스|세종캠퍼스|천안캠퍼스|WISE캠퍼스)$/,m=>m);
+    const w=nm.length*fs*0.92,h=fs*1.15,x0=x.p[0]+r+2*u,y0=x.p[1]-h/2;
+    const b=[x0,y0,x0+w,y0+h];
+    if(x!==MS.sel&&boxes.some(o=>!(b[2]<o[0]||b[0]>o[2]||b[3]<o[1]||b[1]>o[3])))continue;
+    boxes.push(b);
+    const t=el("text",{class:"lbl"+(x===MS.sel?" sel":""),x:x0,y:x.p[1]+fs*0.36,"font-size":fs});t.style.strokeWidth=3*u+"px";t.textContent=nm;gLbl.appendChild(t);
+    if(boxes.length>260)break;
+  }
+  legend();
+}
+function setVB(nv){
+  const minH=FULL.h/28,maxH=FULL.h*1.15;let h=Math.min(maxH,Math.max(minH,nv.h));const W=svg.clientWidth||800,H=svg.clientHeight||600;const w=h*W/H;
+  const cx=nv.x+nv.w/2,cy=nv.y+nv.h/2;MS.vb={x:cx-w/2,y:cy-h/2,w,h};draw();
+}
+function fit(b,pad=0.12){const W=svg.clientWidth||800,H=svg.clientHeight||600;let w=b[2]-b[0],h=b[3]-b[1];w*=1+pad*2;h*=1+pad*2;if(w/h>W/H)h=w*H/W;else w=h*W/H;
+  const cx=(b[0]+b[2])/2,cy=(b[1]+b[3])/2;MS.vb={x:cx-w/2,y:cy-h/2,w,h};setVB(MS.vb)}
+function zoomAt(f,px,py){const v=MS.vb;const nh=Math.min(FULL.h*1.15,Math.max(FULL.h/28,v.h/f));const rf=v.h/nh;const nw=v.w/rf;
+  MS.vb={x:px-(px-v.x)/rf,y:py-(py-v.y)/rf,w:nw,h:nh};draw()}
+function toUser(e){const r=svg.getBoundingClientRect();const v=MS.vb;const u=Math.max(v.w/r.width,v.h/r.height);
+  const ox=(r.width*u-v.w)/2,oy=(r.height*u-v.h)/2;return [v.x-ox+(e.clientX-r.left)*u,v.y-oy+(e.clientY-r.top)*u,u]}
+function zoomProv(k){MS.prov=k;rstat();const c=pCent[k];if(c)fit(c.bx,k==="seoul"||k==="gyeonggi"?0.04:0.1);$("hint").hidden=true}
+function resetView(){MS.prov=null;rstat();fit([FULL.x,FULL.y,FULL.x+FULL.w,FULL.y+FULL.h],0.02)}
+// 지역 바로가기
+const JUMPS=[["전국",null],["수도권",[126.3,36.9,127.9,38.0]],["서울",[126.76,37.42,127.19,37.70]],["충청",[125.9,35.95,128.7,37.25]],["호남",[125.0,34.15,127.95,36.15]],["영남",[127.6,34.55,129.65,37.15]],["강원",[127.0,36.95,129.4,38.65]],["제주",[126.1,33.15,127.0,33.6]]];
+$("jump").innerHTML=JUMPS.map(([l],i)=>`<button type="button" data-i="${i}">${l}</button>`).join("");
+$("jump").onclick=e=>{const b=e.target.closest("button");if(!b)return;const j=JUMPS[b.dataset.i][1];MS.prov=null;rstat();if(!j)return resetView();const a=prj([j[0],j[3]]),c=prj([j[2],j[1]]);fit([a[0],a[1],c[0],c[1]],0.02)};
+// 포인터: 이동·확대·선택
+const ptrs=new Map();let start=null,moved=false,pinch=null;
+const stage=$("stage");
+stage.addEventListener("pointerdown",e=>{if(e.target.closest(".zoomer"))return;stage.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===1){start={x:e.clientX,y:e.clientY,vb:{...MS.vb},t:e.target};moved=false}
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y),vb:{...MS.vb}};moved=true}});
+stage.addEventListener("pointermove",e=>{if(!ptrs.has(e.pointerId))return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(ptrs.size===2&&pinch){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);MS.vb={...pinch.vb};const m=toUser({clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2});zoomAt(d/pinch.d,m[0],m[1]);return}
+  if(!start)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;if(Math.hypot(dx,dy)>4){moved=true;stage.classList.add("drag")}
+  if(moved){const r=svg.getBoundingClientRect();const u=Math.max(start.vb.w/r.width,start.vb.h/r.height);MS.vb={...start.vb,x:start.vb.x-dx*u,y:start.vb.y-dy*u};draw()}});
+const up=e=>{if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);stage.classList.remove("drag");
+  if(ptrs.size<2)pinch=null;
+  if(ptrs.size===0&&start&&!moved){
+    const [ux,uy,u]=toUser(e);let best=null,bd=14*u;
+    for(const x of ALL){if(!MS.on[x.c])continue;const d=Math.hypot(x.p[0]-ux,x.p[1]-uy);if(d<bd){bd=d;best=x}}
+    if(best){MS.sel=best;card(best);draw()}
+    else if(start.t.classList&&start.t.classList.contains("prov"))zoomProv(start.t.dataset.k);
+  }
+  if(ptrs.size===0)start=null};
+stage.addEventListener("pointerup",up);stage.addEventListener("pointercancel",up);
+stage.addEventListener("wheel",e=>{e.preventDefault();const [ux,uy]=toUser(e);zoomAt(Math.exp(-e.deltaY*0.0018),ux,uy);$("hint").hidden=true},{passive:false});
+$("zin").onclick=()=>{const v=MS.vb;zoomAt(1.6,v.x+v.w/2,v.y+v.h/2)};
+$("zout").onclick=()=>{const v=MS.vb;zoomAt(1/1.6,v.x+v.w/2,v.y+v.h/2)};
+$("zreset").onclick=resetView;
+$("mq").addEventListener("input",e=>{MS.q=e.target.value.trim();
+  const hs=ALL.filter(x=>MS.on[x.c]&&match(x));
+  if(MS.q&&hs.length){if(hs.length===1){MS.sel=hs[0];card(hs[0])}
+    const xs=hs.map(x=>x.p[0]),ys=hs.map(x=>x.p[1]);const b=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
+    const pad=Math.max(25,(b[2]-b[0])*0.15);fit([b[0]-pad,b[1]-pad,b[2]+pad,b[3]+pad],0)}
+  else draw()});
+new ResizeObserver(()=>{if(!$("mapView").hidden)setVB(MS.vb)}).observe(stage);
+// 보기 전환
+let mapInit=false;
+function showView(v){const m=v==="map";$("mapView").hidden=!m;document.querySelector(".layout").hidden=m;
+  $("tabMap").setAttribute("aria-selected",m);$("tabList").setAttribute("aria-selected",!m);
+  if(m&&!mapInit){mapInit=true;rstat();requestAnimationFrame(resetView)}
+  try{localStorage.setItem("unimap-view",v)}catch(e){}}
+$("tabList").onclick=()=>showView("list");$("tabMap").onclick=()=>showView("map");
+let v0="list";try{v0=localStorage.getItem("unimap-view")||"list"}catch(e){}
+if(location.hash==="#map")v0="map";
+showView(v0);
+
+</script>
+
+</body></html>
